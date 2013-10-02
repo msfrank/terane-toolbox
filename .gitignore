@@ -2,3 +2,6 @@
 build
 dist
 terane_toolbox.egg-info
+.idea
+out
+*.iml
