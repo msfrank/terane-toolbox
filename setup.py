@@ -48,7 +48,6 @@ setup(
         'terane',
         'terane.api',
         'terane.toolbox',
-        'terane.toolbox.console',
         'terane.toolbox.search',
         ],
     entry_points={
