@@ -46,14 +46,15 @@ setup(
     # package contents
     packages=[
         'terane',
-        'terane.commands',
-        'terane.commands.console',
-        'terane.commands.search',
+        'terane.api',
+        'terane.toolbox',
+        'terane.toolbox.console',
+        'terane.toolbox.search',
         ],
     entry_points={
         'console_scripts': [
-            'terane=terane.commands.console:console_main',
-            'terane-search=terane.commands.search:search_main',
+            'terane=terane.toolbox.console:console_main',
+            'terane-search=terane.toolbox.search:search_main',
             ],
         },
     test_suite="tests",

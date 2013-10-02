@@ -1,4 +1,4 @@
-# Copyright 2010,2011 Michael Frank <msfrank@syntaxjockey.com>
+# Copyright 2010-2013 Michael Frank <msfrank@syntaxjockey.com>
 #
 # This file is part of Terane.
 #
@@ -15,10 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
-__version__ = (0, 3, 1)
+class ApiContext(object):
 
-def versionstring():
-    """
-    Return the version number as a string.
-    """
-    return "%i.%i.%i" % __version__
+    def __init__(self, bindaddress=None, connectionpool=None, connecttimeout=None, factory=None):
+        from twisted.internet import reactor
+        self.reactor = reactor
+        self.bindaddress = bindaddress
+        self.connectionpool = connectionpool
+        self.connecttimeout = connecttimeout
+        self.factory = factory
