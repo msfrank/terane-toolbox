@@ -16,7 +16,7 @@
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
 import os, sys, traceback
-from terane.commands.search.searcher import Searcher
+from terane.toolbox.search.searcher import Searcher
 from terane.settings import Settings, ConfigureError
 
 def search_main():

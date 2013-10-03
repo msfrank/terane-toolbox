@@ -17,9 +17,10 @@
 
 class ApiContext(object):
 
-    def __init__(self, bindaddress=None, connectionpool=None, connecttimeout=None, factory=None):
+    def __init__(self, url, bindaddress=None, connectionpool=None, connecttimeout=None, factory=None):
         from twisted.internet import reactor
         self.reactor = reactor
+        self.url = url
         self.bindaddress = bindaddress
         self.connectionpool = connectionpool
         self.connecttimeout = connecttimeout

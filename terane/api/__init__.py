@@ -15,8 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
-import datetime, dateutil.tz
 from collections import Mapping
+from datetime import datetime
+from dateutil.tz import tzutc
 
 class FieldIdentifier(object):
     """
@@ -30,7 +31,7 @@ class FieldIdentifier(object):
     ADDRESS   = 6
     HOSTNAME  = 7
 
-    _fieldlookup = {
+    _idlookup = {
         'TEXT': TEXT,
         'LITERAL': LITERAL,
         'INTEGER': INTEGER,
@@ -39,25 +40,48 @@ class FieldIdentifier(object):
         'ADDRESS': ADDRESS,
         'HOSTNAME': HOSTNAME
     }
+    _namelookup = {
+        TEXT: 'TEXT',
+        LITERAL: 'LITERAL',
+        INTEGER: 'INTEGER',
+        FLOAT: 'FLOAT',
+        DATETIME: 'DATETIME',
+        ADDRESS: 'ADDRESS',
+        HOSTNAME: 'HOSTNAME'
+    }
 
-    def __init__(self, name, type):
-        self.name = unicode(name)
-        self.type = type
+    def __init__(self, fieldname, fieldtype):
+        self.name = unicode(fieldname)
+        self.type = fieldtype
+
+    def __eq__(self, other):
+        return self.name == other.name and self.type == other.type
+
+    def __str__(self):
+        return str("%s:%s" % (FieldIdentifier._namelookup[self.type], self.name))
+
+    def __repr__(self):
+        return str(self)
+
+    def __hash__(self):
+        return hash("%d:%s" % (self.type,self.name))
 
     @classmethod
     def fromstring(cls, fieldname, fieldtype):
-        return FieldIdentifier(fieldname, FieldIdentifier._fieldlookup[fieldtype.upper()])
+        return FieldIdentifier(fieldname, FieldIdentifier._idlookup[fieldtype.upper()])
 
 class Event(Mapping):
     """
     """
+
+    _utc = tzutc()
 
     _parsefield = {
         FieldIdentifier.TEXT: (lambda x: unicode(x)),
         FieldIdentifier.LITERAL: (lambda x: unicode(x)),
         FieldIdentifier.INTEGER: (lambda x: int(x)),
         FieldIdentifier.FLOAT: (lambda x: float(x)),
-        FieldIdentifier.DATETIME: (lambda x: datetime.datetime.fromtimestamp(float(x), dateutil.tz.tzutc())),
+        FieldIdentifier.DATETIME: (lambda x: datetime.fromtimestamp(float(x) / 1000.0, Event._utc)),
         FieldIdentifier.ADDRESS: (lambda x: str(x)),
         FieldIdentifier.HOSTNAME: (lambda x: str(x)),
     }
@@ -67,8 +91,8 @@ class Event(Mapping):
     def __init__(self, id, values):
         self._id = id
         self._values = dict()
-        for field,value in values:
-            self._values[field] = Event._parsefield[field.type](value)
+        for field,value in values.items():
+            self._values[(field.name,field.type)] = Event._parsefield[field.type](value)
 
     @property
     def id(self):
@@ -91,7 +115,7 @@ class Event(Mapping):
 
     def text(self, key, default=_MISSING):
         try:
-            return unicode(self._values[FieldIdentifier(key, FieldIdentifier.TEXT)])
+            return self._values[(key, FieldIdentifier.TEXT)]
         except KeyError:
             if default is Event._MISSING:
                 raise
@@ -99,7 +123,7 @@ class Event(Mapping):
 
     def literal(self, key, default=_MISSING):
         try:
-            return unicode(self._values[FieldIdentifier(key, FieldIdentifier.LITERAL)])
+            return self._values[(key, FieldIdentifier.LITERAL)]
         except KeyError:
             if default is Event._MISSING:
                 raise
@@ -108,7 +132,7 @@ class Event(Mapping):
 
     def integer(self, key, default=_MISSING):
         try:
-            return int(self._values[FieldIdentifier(key, FieldIdentifier.INTEGER)])
+            return self._values[(key, FieldIdentifier.INTEGER)]
         except KeyError:
             if default is Event._MISSING:
                 raise
@@ -116,7 +140,7 @@ class Event(Mapping):
 
     def float(self, key, default=_MISSING):
         try:
-            return float(self._values[FieldIdentifier(key, FieldIdentifier.FLOAT)])
+            return self._values[(key, FieldIdentifier.FLOAT)]
         except KeyError:
             if default is Event._MISSING:
                 raise
@@ -124,7 +148,7 @@ class Event(Mapping):
 
     def datetime(self, key, default=_MISSING):
         try:
-            return datetime.datetime.fromtimestamp(float(self._values[FieldIdentifier(key, FieldIdentifier.DATETIME)]))
+            return self._values[(key, FieldIdentifier.DATETIME)]
         except KeyError:
             if default is Event._MISSING:
                 raise
@@ -132,7 +156,7 @@ class Event(Mapping):
 
     def address(self, key, default=_MISSING):
         try:
-            return str(self._values[FieldIdentifier(key, FieldIdentifier.ADDRESS)])
+            return self._values[(key, FieldIdentifier.ADDRESS)]
         except KeyError:
             if default is Event._MISSING:
                 raise
@@ -140,27 +164,23 @@ class Event(Mapping):
 
     def hostname(self, key, default=_MISSING):
         try:
-            return str(self._values[FieldIdentifier(key, FieldIdentifier.HOSTNAME)])
+            return self._values[(key, FieldIdentifier.HOSTNAME)]
         except KeyError:
             if default is Event._MISSING:
                 raise
             return default
 
-    @property
     def source(self, default=_MISSING):
         return self.literal('source', default)
 
-    @property
     def origin(self, default=_MISSING):
         return self.hostname('origin', default)
 
-    @property
-    def timestamp(self):
-        return self.datetime('timestamp')
+    def timestamp(self, default=_MISSING):
+        return self.datetime('timestamp', default)
 
-    @property
-    def message(self):
-        return self.text('message')
+    def message(self, default=_MISSING):
+        return self.text('message', default)
 
     _source = FieldIdentifier('source', FieldIdentifier.LITERAL)
     _origin = FieldIdentifier('origin', FieldIdentifier.HOSTNAME)

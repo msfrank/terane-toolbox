@@ -15,14 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, sys, datetime, dateutil.tz, json
+import os, sys, datetime, dateutil.tz, json, urlparse
 from logging import StreamHandler, DEBUG, Formatter
 from pprint import pformat
+from twisted.internet.defer import Deferred
 from twisted.web.client import Agent, readBody
 from twisted.web.http_headers import Headers
 
-from terane.api import Field, Event, ApiError
-from terane.client import JsonProducer
+from terane.api import FieldIdentifier, Event, ApiError
+from terane.api.client import JsonProducer
 from terane.loggers import getLogger, startLogging, StdoutHandler, DEBUG
 from terane import versionstring
 
@@ -50,7 +51,7 @@ class SearchRequest(object):
         agent = Agent(context.reactor, context.factory, context.connecttimeout, context.bindaddress, context.connectionpool)
         createparams = {
             "query": self.query,
-            "store": self.source,
+            "store": self.store,
         }
         if self.fields != None:
             createparams['fields'] = self.fields
@@ -62,61 +63,62 @@ class SearchRequest(object):
             createparams['reverse'] = self.reverse
         headers = self.headers.copy()
         headers.addRawHeader("Content-Type", "application/json"),
-        request = agent.request("POST", "http://%s/1/queries" % self.host, headers=headers, bodyProducer=JsonProducer(createparams))
+        url = urlparse.urljoin(context.url.geturl(), '/1/queries')
+        request = agent.request("POST", url, headers=headers, bodyProducer=JsonProducer(createparams))
         logger.debug("creating query with params: %s" % pformat(createparams))
         deferred = Deferred()
-        request.addCallback(self.queryCreated, agent, deferred)
-        request.addErrback(self.handleError, agent, deferred)
+        request.addCallback(self.queryCreated, agent, context, deferred)
+        request.addErrback(self.handleError, agent, context, deferred)
         return deferred
 
-    def queryCreated(self, response, agent, deferred):
+    def queryCreated(self, response, agent, context, deferred):
         if response.code != 201:
             raise Exception("received non-OK response from server")
-        deferred = readBody(response)
-        deferred.addCallback(self.getQuery, agent, deferred)
-        deferred.addErrback(self.handleError, agent, deferred)
+        response = readBody(response)
+        response.addCallback(self.getQuery, agent, context, deferred)
+        response.addErrback(self.handleError, agent, context, deferred)
 
-    def getQuery(self, entity, agent, deferred):
+    def getQuery(self, entity, agent, context, deferred):
         query = json.loads(entity)
         queryid = str(query["id"])
         logger.debug("created query %s" % queryid)
-        deferred = self.agent.request("GET", "http://%s/1/queries/%s/events" % (self.host, queryid), headers=self.headers.copy())
-        deferred.addCallback(self.getEvents, agent, deferred)
-        deferred.addErrback(self.handleError, agent, deferred)
+        url = urlparse.urljoin(context.url.geturl(), "/1/queries/%s/events" % queryid)
+        request = agent.request("GET", url, headers=self.headers.copy())
+        request.addCallback(self.getEvents, agent, context, deferred)
+        request.addErrback(self.handleError, agent, context, deferred)
 
-    def getEvents(self, response, agent, deferred):
+    def getEvents(self, response, agent, context, deferred):
         if response.code != 200:
             raise Exception("received non-OK response from server")
         logger.debug("received events")
-        deferred = readBody(response)
-        deferred.addCallback(self.processResult, agent, deferred)
-        deferred.addErrback(self.handleError, agent, deferred)
+        response = readBody(response)
+        response.addCallback(self.processResult, agent, context, deferred)
+        response.addErrback(self.handleError, agent, context, deferred)
 
-    def processResult(self, entity, agent, deferred):
+    def processResult(self, entity, agent, context, deferred):
         result = json.loads(entity)
         logger.debug("processing json result: %s" % pformat(result))
         # build field lookup table
         fields = dict()
         for key,field in result['fields'].items():
             try:
-                fields[key] = Field.fromstring(field['name'], field['type'])
+                fields[key] = FieldIdentifier.fromstring(field[1], field[0])
             except KeyError:
               pass
         logger.debug("built field lookup table: %s" % fields)
         # process events
         events = list()
-        for eventid,eventfields in events:
+        for eventid,eventfields in result['events']:
             values = dict()
-            for key,value in eventfields:
-                field = fields[key]
-                values[Field.fromstring(fieldname, fieldtype)] = value
+            for key,value in eventfields.items():
+                values[fields[key]] = value
             events.append(Event(eventid, values))
         # process statistics 
-        stats = None
+        stats = SearchStatistics()
         # pass the result to the deferred
         deferred.callback(SearchResult(events, fields, stats, bool(result['finished'])))
  
-    def handleError(self, failure, agent, deferred):
+    def handleError(self, failure, agent, context, deferred):
         deferred.errback(failure)
 
 class SearchResult(object):
@@ -126,3 +128,8 @@ class SearchResult(object):
         self.fields = fields
         self.stats = stats
         self.finished = finished
+
+class SearchStatistics(object):
+
+    def __init__(self):
+        pass

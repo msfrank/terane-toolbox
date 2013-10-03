@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, sys, datetime, dateutil.tz, json
+import json, urlparse
 from getpass import getpass
 from twisted.internet import reactor
 from terane.api import FieldIdentifier
@@ -32,12 +32,12 @@ class Searcher(object):
     def configure(self, settings):
         # load configuration
         section = settings.section("search")
-        self.host = section.getString("host", 'localhost:45565')
+        self.host = urlparse.urlparse(section.getString("host", 'http://localhost:8080'))
         self.username = section.getString("username", None)
         self.password = section.getString("password", None)
         if section.getBoolean("prompt password", False):
             self.password = getpass("Password: ")
-        self.source = section.getString("source", "main")
+        self.store = section.getString("store", "main")
         # get the list of fields to retrieve
         self.fields = section.getList(str, "retrieve fields", None)
         if self.fields != None:
@@ -69,7 +69,7 @@ class Searcher(object):
             return FieldIdentifier.fromstring(s, '')
 
     def run(self):
-        context = ApiContext()
+        context = ApiContext(self.host)
         request = SearchRequest(self.query, self.store, self.fields, self.sortby, self.limit, self.reverse)
         deferred = request.execute(context)
         deferred.addCallback(self.printResult)
@@ -96,7 +96,7 @@ class Searcher(object):
                 # get the message
                 message = event.message("")
                 # display
-                print "%s @ %s (%s): %s" % (timestamp, origin, source, message)
+                print "%s [%s] %s" % (timestamp, origin, message)
                 if self.longfmt:
                     for fieldid,value in sorted(event.fields(), key=lambda x: (x[0].name,x[0].type)):
                         if self.fields and fieldid not in self.fields:
