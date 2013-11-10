@@ -15,7 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, sys, datetime, dateutil.tz, json, urlparse
+import json, urlparse
+from uuid import UUID
+from datetime import datetime, timedelta
+from dateutil.tz import tzutc
 from logging import StreamHandler, DEBUG, Formatter
 from pprint import pformat
 from twisted.internet.defer import Deferred
@@ -114,7 +117,7 @@ class SearchRequest(object):
                 values[fields[key]] = value
             events.append(Event(eventid, values))
         # process statistics 
-        stats = SearchStatistics()
+        stats = SearchStatistics(result['stats'])
         # pass the result to the deferred
         deferred.callback(SearchResult(events, fields, stats, bool(result['finished'])))
  
@@ -131,5 +134,12 @@ class SearchResult(object):
 
 class SearchStatistics(object):
 
-    def __init__(self):
-        pass
+    _utc = tzutc()
+
+    def __init__(self, stats):
+        self.queryid = UUID(stats['id'])
+        self.created = datetime.fromtimestamp(float(stats['created']) / 1000.0, SearchStatistics._utc)
+        self.state = stats['state']
+        self.runtime = timedelta(milliseconds=stats['runtime'])
+        self.numread = stats['numRead']
+        self.numsent = stats['numSent']

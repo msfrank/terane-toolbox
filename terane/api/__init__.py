@@ -182,15 +182,17 @@ class Event(Mapping):
     def message(self, default=_MISSING):
         return self.text('message', default)
 
-    _source = FieldIdentifier('source', FieldIdentifier.LITERAL)
-    _origin = FieldIdentifier('origin', FieldIdentifier.HOSTNAME)
-    _timestamp = FieldIdentifier('timestamp', FieldIdentifier.DATETIME)
-    _message = FieldIdentifier('message', FieldIdentifier.TEXT)
+    _special = (
+        ('source', FieldIdentifier.LITERAL),
+        ('origin', FieldIdentifier.HOSTNAME),
+        ('timestamp', FieldIdentifier.DATETIME),
+        ('message', FieldIdentifier.TEXT)
+    )
 
     def fields(self):
         for fieldid,value in self.items():
-            if fieldid not in (Event._source, Event._origin, Event._timestamp, Event._message):
-                yield (fieldid, value)
+            if fieldid not in Event._special:
+                yield (FieldIdentifier(fieldid[0], fieldid[1]), value)
 
 
 class ApiError(Exception):

@@ -98,12 +98,13 @@ class Searcher(object):
                 # display
                 print "%s [%s] %s" % (timestamp, origin, message)
                 if self.longfmt:
-                    for fieldid,value in sorted(event.fields(), key=lambda x: (x[0].name,x[0].type)):
+                    fields = event.fields()
+                    for fieldid,value in sorted(fields, key=lambda x: (x[0].name,x[0].type)):
                         if self.fields and fieldid not in self.fields:
                             continue
-                        print "\t%s=%s" % (fieldid,value)
+                        print "\t%s=%s" % (fieldid.name, value)
             print ""
-            print "found %i matches in %f seconds." % (len(result.events), 0.0)
+            print "found %i matches in %.3f seconds." % (len(result.events), result.stats.runtime.total_seconds())
         else:
             print "no matches found."
         reactor.stop()
