@@ -86,6 +86,18 @@ class Event(Mapping):
         FieldIdentifier.HOSTNAME: (lambda x: str(x)),
     }
 
+    _validatefield = {
+        FieldIdentifier.TEXT: (lambda x: x if isinstance(x, unicode) else None),
+        FieldIdentifier.LITERAL: (lambda x: x if isinstance(x, unicode) else None),
+        FieldIdentifier.INTEGER: (lambda x: x if isinstance(x, int) else None),
+        FieldIdentifier.FLOAT: (lambda x: x if isinstance(x, float) else None),
+        FieldIdentifier.DATETIME: (lambda x: x if isinstance(x, datetime.datetime) else None),
+        FieldIdentifier.ADDRESS: (lambda x: x if isinstance(x, str) else None),
+        FieldIdentifier.HOSTNAME: (lambda x: x if isinstance(x, str) else None),
+    }
+
+    EMPTY_ID = None
+
     _MISSING = "missing"
 
     def __init__(self, id, values):
@@ -98,20 +110,23 @@ class Event(Mapping):
     def id(self):
         return self._id
 
-    def items(self):
-        return self._values.items()
-
     def __len__(self):
         return len(self._values)
 
     def __iter__(self):
         return iter(self._values)
 
-    def __contains__(self, key):
-        return key in self._values
+    def __contains__(self, field):
+        return field in self._values
 
-    def __getitem__(self, key):
-        return self._values[key]
+    def __getitem__(self, field):
+        return self._values[field]
+
+    def set(self, field, value):
+        validated = Event._validatefield[field.type](value)
+        if validated == None:
+            raise TypeError()
+        self._values[(field.name,field.type)] = validated
 
     def text(self, key, default=_MISSING):
         try:

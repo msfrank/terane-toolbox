@@ -445,7 +445,61 @@ class Section(object):
         except Exception, e:
             raise ConfigureError("failed to parse configuration item [%s]=>%s: %s" % (
                 self.name, name, e))
-            
+
+class PipelineSettings(object):
+    """
+    """
+    def __init__(self, pipeline):
+        """
+        :param pipeline: A list of Node objects
+        :type pipeline: list
+        """
+        self._config = RawConfigParser()
+        self._cwd = os.getcwd()
+        index = 0
+        for node in pipeline:
+            sectionname = "node:%i" % index
+            self._config.add_section(sectionname)
+            for key,value in node.params.items():
+                self._config.set(sectionname, key, value)
+            self._config.set(sectionname, "type", node.name)
+            index += 1
+
+    def hasSection(self, index):
+        """
+        Returns True if the specified section exists, otherwise False.
+
+        :param index: The section index.
+        :type index: int
+        :returns: True or False.
+        :rtype: [bool]
+        """
+        return self._config.has_section("node:%i" % index)
+
+    def section(self, index):
+        """
+        Get the section with the specified name.  Note if the section
+        does not exist, this method still doesn't fail.
+
+        :param index: The section name.
+        :type index: int
+        :returns: The specified section.
+        :rtype: :class:`Section`
+        """
+        return Section("node:%i" % index, self)
+
+    def sections(self):
+        """
+        Return a list of all sections.
+
+        :returns: A list of all sections.
+        :rtype: :[class:`Section`]
+        """
+        sections = []
+        for name in sorted(self._config.sections()):
+            sections.append(Section(name, self))
+        return sections
+
 class _UnittestSettings(Settings):
     """
     Subclass of Settings which loads configuration from a dict of dicts.  Only

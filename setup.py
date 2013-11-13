@@ -23,6 +23,7 @@ setup(
         "Twisted >= 13.1.0",
         "pyparsing",
         "python-dateutil",
+        "loggerglue",
         "urwid",
         "zope.interface",
         "zope.component",
@@ -48,11 +49,13 @@ setup(
         'terane',
         'terane.api',
         'terane.toolbox',
+        'terane.toolbox.etl',
         'terane.toolbox.search',
         ],
     entry_points={
         'console_scripts': [
-            'terane=terane.toolbox.console:console_main',
+            #'terane=terane.toolbox.console:console_main',
+            'terane-etl=terane.toolbox.etl:etl_main',
             'terane-search=terane.toolbox.search:search_main',
             ],
         },
