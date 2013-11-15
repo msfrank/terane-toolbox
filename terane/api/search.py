@@ -30,7 +30,7 @@ from terane.api.client import JsonProducer
 from terane.loggers import getLogger, startLogging, StdoutHandler, DEBUG
 from terane import versionstring
 
-logger = getLogger('terane.commands.api.search')
+logger = getLogger('terane.api.search')
 
 class SearchRequest(object):
     """

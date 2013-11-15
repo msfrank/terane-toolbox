@@ -23,7 +23,7 @@ def etl_main():
     try:
         settings = Settings(usage="[OPTIONS...] PIPELINE [ - | FILE...]")
         settings.addOption("H", "host", "etl", "host",
-            help="connect to terane server HOST", metavar="HOST"
+            help="connect to syslog server HOST", metavar="HOST"
             )
         settings.addOption("s", "store", "etl", "store",
             help="publish events to the specified STORE", metavar="STORE"

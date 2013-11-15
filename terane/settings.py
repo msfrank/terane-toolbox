@@ -446,6 +446,15 @@ class Section(object):
             raise ConfigureError("failed to parse configuration item [%s]=>%s: %s" % (
                 self.name, name, e))
 
+    def set(self, name, value):
+        if value == None:
+            raise ConfigureError("failed to modify configuration item [%s]=>%s: value is not a string" % (
+            self.name, name))
+        self._config.set(self.name, name, value)
+
+    def remove(self, name):
+        self._config.set(self.name, name, None)
+
 class PipelineSettings(object):
     """
     """

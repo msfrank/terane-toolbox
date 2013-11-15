@@ -48,6 +48,8 @@ setup(
     packages=[
         'terane',
         'terane.api',
+        'terane.sinks',
+        'terane.sources',
         'terane.toolbox',
         'terane.toolbox.etl',
         'terane.toolbox.search',

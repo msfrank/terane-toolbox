@@ -33,21 +33,65 @@ node.setParseAction(_parseNode)
 nodeseq = node + ZeroOrMore("|" + node)
 
 class NodeSpec(object):
+    """
+    Encapsulates a node specification, which consists of a name and a
+    map of key-value parameters.
+    """
     def __init__(self, name, params):
         self.name = name
         self.params = params
 
 class DropEvent(Exception):
-    pass
+    """
+    If any node in a :class:`Pipeline` raises this exception, the currently
+    processed event is dropped and the pipeline continues with the next event
+    from the source.
+    """
 
 class Pipeline(object):
     """
+    A pipeline consists of a source, a sink, and a sequence of zero or more
+    filters.  A pipeline may be executed by executing the run() method, which 
+    synchronously pulls events from the source, feeds them through each filter,
+    and pushes them into the sink until there are no more events left (the
+    source raises StopIteration).
     """
-    def __init__(self, source, *filters):
+
+    def __init__(self, source, sink, *filters):
         self._source = source
+        self._sink = sink
         self._filters = filters
 
-    def next(self):
+    def __str__(self):
+        source = str(self._source)
+        sink = str(self._sink)
+        if len(self._filters) > 0:
+            filters = " ~> ".join([str(f) for f in self._filters])
+            return "%s ~> %s ~> %s" % (source, filters, sink)
+        return "%s ~> %s" % (source, sink)
+
+    def run(self):
+        """
+        Run the pipeline synchronously until there are no more events.
+
+        :raises: Exception
+        """
+        self._source.init()
+        self._sink.init()
+        for f in self._filters:
+            f.init()
+        try:
+            while True:
+                self._sink.consume(self._next())
+        except StopIteration:
+            pass
+        finally:
+            self._source.fini()
+            self._sink.fini()
+            for f in self._filters:
+                f.fini()
+
+    def _next(self):
         """
         Return the next :class:`Event` from the pipeline, or raise
         StopIteration.
@@ -59,7 +103,7 @@ class Pipeline(object):
         event = None
         while event == None:
             try:
-                _event = self._source.next()
+                _event = self._source.emit()
                 for f in self._filters:
                     _event = f.filter(_event)
                 event = _event

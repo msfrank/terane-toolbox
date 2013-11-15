@@ -23,7 +23,7 @@ from terane.api.context import ApiContext
 from terane.api.search import SearchRequest
 from terane.loggers import getLogger, startLogging, StdoutHandler, DEBUG
 
-logger = getLogger('terane.commands.search.searcher')
+logger = getLogger('terane.toolbox.search.searcher')
 
 class Searcher(object):
     """

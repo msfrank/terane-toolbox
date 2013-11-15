@@ -19,6 +19,9 @@ from collections import Mapping
 from datetime import datetime
 from dateutil.tz import tzutc
 
+# IANA registered private enterprise number for terane
+PEN = 42785
+
 class FieldIdentifier(object):
     """
     """
@@ -97,6 +100,10 @@ class Event(Mapping):
     }
 
     EMPTY_ID = None
+    SOURCE = FieldIdentifier('source', FieldIdentifier.LITERAL)
+    ORIGIN = FieldIdentifier('origin', FieldIdentifier.HOSTNAME)
+    TIMESTAMP = FieldIdentifier('timestamp', FieldIdentifier.DATETIME)
+    MESSAGE = FieldIdentifier('message', FieldIdentifier.TEXT)
 
     _MISSING = "missing"
 
