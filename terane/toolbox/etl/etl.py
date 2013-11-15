@@ -18,9 +18,7 @@
 import sys
 from terane.sources.file import StdinSource
 from terane.sinks.syslog import SyslogSink
-from terane.sinks.debug import DebugSink
 from terane.pipeline import Pipeline
-from terane.settings import ConfigureError
 from terane.loggers import getLogger, startLogging, StdoutHandler, DEBUG
 
 logger = getLogger('terane.toolbox.etl.etl')

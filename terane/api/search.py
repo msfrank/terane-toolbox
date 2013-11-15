@@ -19,15 +19,15 @@ import json, urlparse
 from uuid import UUID
 from datetime import datetime, timedelta
 from dateutil.tz import tzutc
-from logging import StreamHandler, DEBUG, Formatter
 from pprint import pformat
 from twisted.internet.defer import Deferred
 from twisted.web.client import Agent, readBody
 from twisted.web.http_headers import Headers
 
-from terane.api import FieldIdentifier, Event, ApiError
+from terane.event import FieldIdentifier, Event
+from terane.api import ApiError
 from terane.api.client import JsonProducer
-from terane.loggers import getLogger, startLogging, StdoutHandler, DEBUG
+from terane.loggers import getLogger
 from terane import versionstring
 
 logger = getLogger('terane.api.search')

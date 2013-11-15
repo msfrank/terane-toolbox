@@ -15,6 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
+from pkg_resources import Environment, working_set
+from terane.loggers import getLogger
+
+logger = getLogger("terane.plugin")
+
 class IPlugin(object):
 
     def configure(self, section):
@@ -25,3 +30,24 @@ class IPlugin(object):
 
     def fini(self):
         pass
+
+class PluginManager(object):
+    """
+    """
+
+    def configure(self, section):
+        env = Environment([])
+        self._eggs,errors = working_set.find_plugins(env)
+        # load plugin eggs
+        for p in self._eggs:
+            working_set.add(p)
+        for e in errors:
+            logger.info("failed to load plugin egg '%s'" % e)
+
+    def getfactory(self, group, name=None):
+        entrypoints = list(working_set.iter_entry_points(group, name))
+        return entrypoints[0].load()
+
+    def newinstance(self, group, name, *args, **kwargs):
+        factory = self.getfactory(group, name)
+        return factory(args, kwargs)

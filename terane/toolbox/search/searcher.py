@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
-import json, urlparse
+import urlparse, dateutil
 from getpass import getpass
 from twisted.internet import reactor
-from terane.api import FieldIdentifier
+from terane.event import FieldIdentifier
 from terane.api.context import ApiContext
 from terane.api.search import SearchRequest
 from terane.loggers import getLogger, startLogging, StdoutHandler, DEBUG

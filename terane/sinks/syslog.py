@@ -19,8 +19,8 @@ import urlparse
 from loggerglue import constants
 from loggerglue.emitter import UDPSyslogEmitter, TCPSyslogEmitter
 from loggerglue.rfc5424 import SyslogEntry
-from terane.api import Event, FieldIdentifier
 from terane.plugin import IPlugin
+from terane.event import Event
 from terane.settings import ConfigureError
 from terane.loggers import getLogger
 
@@ -101,3 +101,6 @@ class SyslogSink(IPlugin):
                           msgid=msgid,
                           msg=message)
         self.emitter.emit(msg)
+
+# IANA registered private enterprise number for terane
+PEN = 42785

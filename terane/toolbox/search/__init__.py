@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, sys, traceback
+import sys, traceback
 from terane.toolbox.search.searcher import Searcher
 from terane.settings import Settings, ConfigureError
 

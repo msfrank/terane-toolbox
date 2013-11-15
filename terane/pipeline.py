@@ -70,26 +70,6 @@ class Pipeline(object):
             return "%s ~> %s ~> %s" % (source, filters, sink)
         return "%s ~> %s" % (source, sink)
 
-    def run(self):
-        """
-        Run the pipeline synchronously until there are no more events.
-
-        :raises: Exception
-        """
-        self._source.init()
-        self._sink.init()
-        for f in self._filters:
-            f.init()
-        try:
-            while True:
-                self._sink.consume(self._next())
-        except StopIteration:
-            pass
-        finally:
-            self._source.fini()
-            self._sink.fini()
-            for f in self._filters:
-                f.fini()
 
     def _next(self):
         """
@@ -111,17 +91,41 @@ class Pipeline(object):
                 pass
         return event
 
-def makepipeline(spec):
+    def run(self):
+        """
+        Run the pipeline synchronously until there are no more events.
+
+        :raises: Exception
+        """
+        self._source.init()
+        self._sink.init()
+        for f in self._filters:
+            f.init()
+        try:
+            while True:
+                self._sink.consume(self._next())
+        except StopIteration:
+            pass
+        finally:
+            self._source.fini()
+            self._sink.fini()
+            for f in self._filters:
+                f.fini()
+
+def parsepipeline(spec):
     """
-    Construct a :class:`Pipeline` from the supplied string spec.
+    Construct a :class:`NodeSpec` sequence from the supplied string spec.
 
     :param spec: The pipeline specification
     :type spec: str
-    :returns: A new :class:`Pipeline`
-    :rtype: :class:`Pipeline`
+    :returns: A list of :class:`NodeSpec` elements comprising the pipeline.
+    :rtype: [:class:`NodeSpec`]
     """
-    nodes = nodeseq.parseString(spec, parseAll=True)
+    return nodeseq.parseString(spec, parseAll=True)
+
+def makepipeline(nodes):
+    """
+    Construct a :class:`Pipeline` from a node sequence.
+    """
     settings = PipelineSettings(nodes)
     return settings
-
-

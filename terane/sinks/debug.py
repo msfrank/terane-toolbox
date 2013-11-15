@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
-from terane.api import Event, FieldIdentifier
 from terane.plugin import IPlugin
+from terane.event import FieldIdentifier
 from terane.loggers import getLogger
 
 logger = getLogger('terane.sinks.debug')

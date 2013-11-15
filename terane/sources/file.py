@@ -16,8 +16,8 @@
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys, time, socket
-from terane.api import Event, FieldIdentifier
 from terane.plugin import IPlugin
+from terane.event import Event
 from terane.loggers import getLogger
 
 logger = getLogger('terane.sources.file')
