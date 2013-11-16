@@ -16,6 +16,7 @@
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import Mapping
+from time import mktime
 from datetime import datetime
 from dateutil.tz import tzutc
 
@@ -82,25 +83,6 @@ class Event(Mapping):
 
     _utc = tzutc()
 
-    _parsefield = {
-        FieldIdentifier.TEXT: (lambda x: unicode(x)),
-        FieldIdentifier.LITERAL: (lambda x: unicode(x)),
-        FieldIdentifier.INTEGER: (lambda x: int(x)),
-        FieldIdentifier.FLOAT: (lambda x: float(x)),
-        FieldIdentifier.DATETIME: (lambda x: datetime.fromtimestamp(float(x) / 1000.0, Event._utc)),
-        FieldIdentifier.ADDRESS: (lambda x: str(x)),
-        FieldIdentifier.HOSTNAME: (lambda x: str(x)),
-    }
-
-    _validatefield = {
-        FieldIdentifier.TEXT: (lambda x: x if isinstance(x, unicode) else None),
-        FieldIdentifier.LITERAL: (lambda x: x if isinstance(x, unicode) else None),
-        FieldIdentifier.INTEGER: (lambda x: x if isinstance(x, int) else None),
-        FieldIdentifier.FLOAT: (lambda x: x if isinstance(x, float) else None),
-        FieldIdentifier.DATETIME: (lambda x: x if isinstance(x, datetime) else None),
-        FieldIdentifier.ADDRESS: (lambda x: x if isinstance(x, unicode) else None),
-        FieldIdentifier.HOSTNAME: (lambda x: x if isinstance(x, unicode) else None),
-    }
 
     EMPTY_ID = None
     SOURCE = FieldIdentifier('source', FieldIdentifier.LITERAL)
@@ -114,11 +96,11 @@ class Event(Mapping):
         self._id = id
         self._values = dict()
         for field,value in values.items():
-            self._values[(field.name,field.type)] = Event._parsefield[field.type](value)
+            self._values[(field.name,field.type)] = parsefield(field, value)
 
     def __str__(self):
         return "Event(%s, %s)" % (self._id, 
-        ", ".join(["%s='%s'" % (k,v) for (k,_),v in event.items()]))
+        ", ".join(["%s='%s'" % (k,v) for (k,_),v in self.items()]))
 
     @property
     def id(self):
@@ -131,7 +113,7 @@ class Event(Mapping):
         return iter(self._values)
 
     def __contains__(self, field):
-        return field in self._values
+        return (field.name,field.type) in self._values
 
     def __getitem__(self, field):
         return self._values[field]
@@ -145,7 +127,7 @@ class Event(Mapping):
             return default
 
     def set(self, field, value):
-        validated = Event._validatefield[field.type](value)
+        validated = validatefield(field, value)
         if validated == None:
             raise TypeError("failed to validate %s as %s" % (value, field.typestring))
         self._values[(field.name,field.type)] = validated
@@ -230,3 +212,55 @@ class Event(Mapping):
         for fieldid,value in self.items():
             if fieldid not in Event._special:
                 yield (FieldIdentifier(fieldid[0], fieldid[1]), value)
+
+    def stringify(self, field):
+        return stringifyfield(field, self._values[(field.name, field.type)])
+
+
+_parsefield = {
+        FieldIdentifier.TEXT: (lambda x: unicode(x)),
+        FieldIdentifier.LITERAL: (lambda x: unicode(x)),
+        FieldIdentifier.INTEGER: (lambda x: int(x)),
+        FieldIdentifier.FLOAT: (lambda x: float(x)),
+        FieldIdentifier.DATETIME: (lambda x: datetime.fromtimestamp(float(x) / 1000.0, Event._utc)),
+        FieldIdentifier.ADDRESS: (lambda x: str(x)),
+        FieldIdentifier.HOSTNAME: (lambda x: str(x)),
+}
+
+def parsefield(field, value):
+    """
+    Decode a field value into a native type.
+    """
+    return _parsefield[field.type](value)
+
+_stringifyfield = {
+        FieldIdentifier.TEXT: (lambda x: unicode(x)),
+        FieldIdentifier.LITERAL: (lambda x: unicode(x)),
+        FieldIdentifier.INTEGER: (lambda x: unicode(x)),
+        FieldIdentifier.FLOAT: (lambda x: unicode(x)),
+        FieldIdentifier.DATETIME: (lambda x: unicode(mktime(x.timetuple()))),
+        FieldIdentifier.ADDRESS: (lambda x: unicode(x)),
+        FieldIdentifier.HOSTNAME: (lambda x: unicode(x)),
+}
+
+def stringifyfield(field, value):
+    """
+    Encode field value as unicode string for transmission.
+    """
+    return _stringifyfield[field.type](value)
+
+_validatefield = {
+        FieldIdentifier.TEXT: (lambda x: x if isinstance(x, unicode) else None),
+        FieldIdentifier.LITERAL: (lambda x: x if isinstance(x, unicode) else None),
+        FieldIdentifier.INTEGER: (lambda x: x if isinstance(x, int) else None),
+        FieldIdentifier.FLOAT: (lambda x: x if isinstance(x, float) else None),
+        FieldIdentifier.DATETIME: (lambda x: x if isinstance(x, datetime) else None),
+        FieldIdentifier.ADDRESS: (lambda x: x if isinstance(x, unicode) else None),
+        FieldIdentifier.HOSTNAME: (lambda x: x if isinstance(x, unicode) else None),
+}
+
+def validatefield(field, value):
+    """
+    Validate that a field value is of the correct type.
+    """
+    return _validatefield[field.type](value)

@@ -24,6 +24,8 @@ logger = getLogger("terane.pipeline")
 
 identifier = Word(alphas, alphanums + '_')
 
+quotedString.setParseAction(removeQuotes)
+
 keyvalue = identifier + Suppress("=") + quotedString
 def _parseKeyvalue(tokens):
     return (tokens[0], tokens[1])

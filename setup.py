@@ -67,6 +67,7 @@ setup(
             'stdin_source=terane.sources.file:StdinSource',
             'syslog_sink=terane.sinks.syslog:SyslogSink',
             'syslog_format=terane.filters.syslog_format:SyslogFormatFilter',
+            'enrich=terane.filters.enrich:EnrichFilter',
             'log_debug=terane.filters.debug:DebugFilter',
             'debug_sink=terane.sinks.debug:DebugSink',
             ]

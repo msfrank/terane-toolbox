@@ -15,16 +15,19 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
-import urlparse
+import urlparse, ssl
 from loggerglue import constants
 from loggerglue.emitter import UDPSyslogEmitter, TCPSyslogEmitter
-from loggerglue.rfc5424 import SyslogEntry
+from loggerglue.rfc5424 import SyslogEntry, SDElement, StructuredData
 from terane.plugin import IPlugin
 from terane.event import Event, FieldIdentifier
 from terane.settings import ConfigureError
 from terane.loggers import getLogger
 
 logger = getLogger('terane.sinks.syslog')
+
+# IANA registered private enterprise number for terane
+PEN = 42785
 
 class SyslogSink(IPlugin):
     """
@@ -37,12 +40,17 @@ class SyslogSink(IPlugin):
     PROCID = FieldIdentifier('procid', FieldIdentifier.LITERAL)
     MSGID = FieldIdentifier('msgid', FieldIdentifier.LITERAL)
 
-    def __init__(self):
+    SDID_SCHEMA = "schema@%d" % PEN
+    SDID_VALUES = "values@%d" % PEN
+
+    def __init__(self, *args, **kwargs):
         self.factory = TCPSyslogEmitter
         self.address = 'localhost'
         self.port = 514
         self.args = dict(address=(self.address,self.port))
         self.emitter = None
+        self._schema = dict()
+        self._alwayssendschema = True
 
     def __str__(self):
         return "SyslogSink(%s, %s)" % (self.factory.__name__,
@@ -72,6 +80,8 @@ class SyslogSink(IPlugin):
         logger.debug("using %s with params %s" % (self.factory.__name__,
           " ".join(["%s=%s" % (k,v) for k,v in self.args.items()])))
         self.emitter = self.factory(**self.args)
+        if self.factory == TCPSyslogEmitter:
+            self._alwayssendschema = False
 
     def fini(self):
         if self.emitter != None:
@@ -82,6 +92,8 @@ class SyslogSink(IPlugin):
         _severity = getattr(constants, "LOG_" + severity.upper())
         return _facility + _severity
 
+    _special = (Event.SOURCE, Event.ORIGIN, Event.TIMESTAMP, Event.MESSAGE, FACILITY, SEVERITY, APPNAME, PROCID, MSGID)
+
     def consume(self, event):
         """
         Convert the incoming event into a syslog message and send it.
@@ -89,7 +101,6 @@ class SyslogSink(IPlugin):
         :param event: The :class:`Event` to send
         :type event: :class:`Event`
         """
-        source = event.source(None)
         origin = event.origin(None)
         timestamp = event.timestamp(None)
         message = event.message(None)
@@ -99,14 +110,36 @@ class SyslogSink(IPlugin):
         appname = event.get(SyslogSink.APPNAME, None)
         procid = event.get(SyslogSink.PROCID, None)
         msgid = event.get(SyslogSink.MSGID, None)
+
+        schema = list()
+        values = dict()
+        for (fieldname,fieldtype) in event.keys():
+            field = FieldIdentifier(fieldname, fieldtype)
+            if not field in SyslogSink._special:
+                if not field in self._schema:
+                    ident = str(len(self._schema) + 1)
+                    schema.append(field)
+                    self._schema[field] = ident
+                    values[ident] = event.stringify(field)
+                else:
+                    ident = self._schema[field]
+                    if self._alwayssendschema:
+                        schema.append(field)
+                    values[ident] = event.stringify(field)
+
+        elements = list()
+        if len(schema) > 0:
+            elements.append(SDElement(SyslogSink.SDID_SCHEMA, [(self._schema[f],str(f)) for f in schema]))
+        if len(values) > 0:
+            elements.append(SDElement(SyslogSink.SDID_VALUES, values))
+        sdata = None if len(elements) == 0 else StructuredData(elements)
+
         msg = SyslogEntry(prival=prival,
                           timestamp=timestamp,
                           hostname=origin,
                           app_name=appname,
                           procid=procid,
                           msgid=msgid,
+                          structured_data=sdata,
                           msg=message)
         self.emitter.emit(msg)
-
-# IANA registered private enterprise number for terane
-PEN = 42785
