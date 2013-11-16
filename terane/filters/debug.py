@@ -19,21 +19,16 @@ from terane.plugin import IPlugin
 from terane.event import FieldIdentifier
 from terane.loggers import getLogger
 
-logger = getLogger('terane.sinks.debug')
+logger = getLogger('terane.filters.debug')
 
-class DebugSink(IPlugin):
+class DebugFilter(IPlugin):
     """
     Dump received events to stdout.
     """
 
     def __str__(self):
-        return "DebugSink()"
+        return "DebugFilter()"
 
-    def consume(self, event):
-        if event.id == None:
-            print "-"
-        else:
-            print event.id
-        for (fieldname,fieldtype),value in event.items():
-            field = FieldIdentifier(fieldname, fieldtype)
-            print "  %s = '%s'" % (field.name,value)
+    def filter(self, event):
+        logger.debug("received %s" % str(event))
+        return event

@@ -26,7 +26,7 @@ class AbstractFileSource(object):
     """
     Abstract base class for file sources, implementing common logic.
     """
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.f = None
         self.hostname = socket.getfqdn()
         self.linemax = 16384
@@ -89,8 +89,8 @@ class StdinSource(IPlugin, AbstractFileSource):
     """
     Read in lines from stdin.
     """
-    def __init__(self):
-        AbstractFileSource.__init__(self)
+    def __init__(self, *args, **kwargs):
+        AbstractFileSource.__init__(self, *args, **kwargs)
         self.f = sys.stdin
 
     def __str__(self):
@@ -99,3 +99,8 @@ class StdinSource(IPlugin, AbstractFileSource):
     def configure(self, section):
         AbstractFileSource.configure(self, section)
 
+    def emit(self):
+        try:
+            return AbstractFileSource.emit(self)
+        except KeyboardInterrupt:
+            raise StopIteration

@@ -71,6 +71,9 @@ class FieldIdentifier(object):
     def fromstring(cls, fieldname, fieldtype):
         return FieldIdentifier(fieldname, FieldIdentifier._idlookup[fieldtype.upper()])
 
+    @property
+    def typestring(self):
+        return FieldIdentifier._namelookup[self.type]
 
 class Event(Mapping):
     """
@@ -94,9 +97,9 @@ class Event(Mapping):
         FieldIdentifier.LITERAL: (lambda x: x if isinstance(x, unicode) else None),
         FieldIdentifier.INTEGER: (lambda x: x if isinstance(x, int) else None),
         FieldIdentifier.FLOAT: (lambda x: x if isinstance(x, float) else None),
-        FieldIdentifier.DATETIME: (lambda x: x if isinstance(x, datetime.datetime) else None),
-        FieldIdentifier.ADDRESS: (lambda x: x if isinstance(x, str) else None),
-        FieldIdentifier.HOSTNAME: (lambda x: x if isinstance(x, str) else None),
+        FieldIdentifier.DATETIME: (lambda x: x if isinstance(x, datetime) else None),
+        FieldIdentifier.ADDRESS: (lambda x: x if isinstance(x, unicode) else None),
+        FieldIdentifier.HOSTNAME: (lambda x: x if isinstance(x, unicode) else None),
     }
 
     EMPTY_ID = None
@@ -112,6 +115,10 @@ class Event(Mapping):
         self._values = dict()
         for field,value in values.items():
             self._values[(field.name,field.type)] = Event._parsefield[field.type](value)
+
+    def __str__(self):
+        return "Event(%s, %s)" % (self._id, 
+        ", ".join(["%s='%s'" % (k,v) for (k,_),v in event.items()]))
 
     @property
     def id(self):
@@ -129,10 +136,18 @@ class Event(Mapping):
     def __getitem__(self, field):
         return self._values[field]
 
+    def get(self, field, default=_MISSING):
+        try:
+            return self._values[(field.name, field.type)]
+        except KeyError:
+            if default is Event._MISSING:
+                raise
+            return default
+
     def set(self, field, value):
         validated = Event._validatefield[field.type](value)
         if validated == None:
-            raise TypeError()
+            raise TypeError("failed to validate %s as %s" % (value, field.typestring))
         self._values[(field.name,field.type)] = validated
 
     def text(self, key, default=_MISSING):

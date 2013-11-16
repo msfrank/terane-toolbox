@@ -16,21 +16,27 @@
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
 from pyparsing import *
+from terane.plugin import PluginManager
 from terane.settings import PipelineSettings
+from terane.loggers import getLogger
 
-keyvalue = Word(alphas, alphanums) + Suppress("=") + quotedString
+logger = getLogger("terane.pipeline")
+
+identifier = Word(alphas, alphanums + '_')
+
+keyvalue = identifier + Suppress("=") + quotedString
 def _parseKeyvalue(tokens):
     return (tokens[0], tokens[1])
 keyvalue.setParseAction(_parseKeyvalue)
 
-node = Word(alphas, alphanums) + ZeroOrMore(keyvalue)
+node = identifier + ZeroOrMore(keyvalue)
 def _parseNode(tokens):
     name = tokens[0]
     params = dict(tokens[1:])
     return NodeSpec(name, params)
 node.setParseAction(_parseNode)
 
-nodeseq = node + ZeroOrMore("|" + node)
+nodeseq = node + ZeroOrMore(Suppress("|") + node)
 
 class NodeSpec(object):
     """
@@ -40,6 +46,9 @@ class NodeSpec(object):
     def __init__(self, name, params):
         self.name = name
         self.params = params
+
+    def __str__(self):
+        return "NodeSpec(%s, %s)" % (self.name, self.params)
 
 class DropEvent(Exception):
     """
@@ -57,10 +66,12 @@ class Pipeline(object):
     source raises StopIteration).
     """
 
-    def __init__(self, source, sink, *filters):
+    def __init__(self, source, sink, filters=[]):
         self._source = source
         self._sink = sink
         self._filters = filters
+        self._processed = 0
+        self._dropped = 0
 
     def __str__(self):
         source = str(self._source)
@@ -87,8 +98,9 @@ class Pipeline(object):
                 for f in self._filters:
                     _event = f.filter(_event)
                 event = _event
-            except DropEvent:
-                pass
+            except DropEvent, e:
+                logger.debug("dropped event: %s" % str(e))
+                self._dropped += 1
         return event
 
     def run(self):
@@ -103,7 +115,12 @@ class Pipeline(object):
             f.init()
         try:
             while True:
-                self._sink.consume(self._next())
+                try:
+                    self._sink.consume(self._next())
+                    self._processed += 1
+                except DropEvent:
+                    logger.debug("dropped event: %s" % str(e))
+                    self._dropped += 1
         except StopIteration:
             pass
         finally:
@@ -111,6 +128,15 @@ class Pipeline(object):
             self._sink.fini()
             for f in self._filters:
                 f.fini()
+
+    @property
+    def processed(self):
+        return self._processed
+
+    @property
+    def dropped(self):
+        return self._dropped
+
 
 def parsepipeline(spec):
     """
@@ -121,11 +147,23 @@ def parsepipeline(spec):
     :returns: A list of :class:`NodeSpec` elements comprising the pipeline.
     :rtype: [:class:`NodeSpec`]
     """
-    return nodeseq.parseString(spec, parseAll=True)
+    if spec == None or spec.strip() == "":
+        return list()
+    return nodeseq.parseString(spec, parseAll=False)
 
-def makepipeline(nodes):
+def makepipeline(nodes, plugins=None):
     """
     Construct a :class:`Pipeline` from a node sequence.
     """
+    if nodes == None or len(nodes) == 0:
+        return list()
+    if plugins == None:
+        plugins = PluginManager()
     settings = PipelineSettings(nodes)
-    return settings
+    nodes = list()
+    for section in settings.sections():
+        nodeindex,pluginname = section.name.split(':', 1)
+        node = plugins.newinstance('terane.plugin.pipeline', pluginname)
+        node.configure(section)
+        nodes.append(node)
+    return nodes

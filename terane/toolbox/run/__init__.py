@@ -16,33 +16,24 @@
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys, traceback
-from terane.toolbox.etl.etl import ETL
+from terane.toolbox.run.runner import Runner
 from terane.settings import Settings, ConfigureError
 
-def etl_main():
+def run_main():
     try:
-        settings = Settings(usage="[OPTIONS...] PIPELINE [ - | FILE...]")
-        settings.addOption("H", "host", "etl", "host",
-            help="connect to syslog server HOST", metavar="HOST"
-            )
-        settings.addOption("f", "filters", "etl", "filters",
-            help="use filter pipeline SPEC", metavar="SPEC"
-            )
-        settings.addOption("s", "store", "etl", "store",
-            help="publish events to the specified STORE", metavar="STORE"
-            )
-        settings.addOption('', "log-config", "etl", "log config file",
+        settings = Settings(usage="[OPTIONS...] PIPELINE")
+        settings.addOption('', "log-config", "run", "log config file",
             help="use logging configuration file FILE", metavar="FILE"
             )
-        settings.addSwitch("d", "debug", "etl", "debug",
+        settings.addSwitch("d", "debug", "run", "debug",
             help="Print debugging information"
             )
         # load configuration
         settings.load()
-        # create the ETL and run it
-        etl = ETL()
-        etl.configure(settings)
-        return etl.run()
+        # create the Runner and run it
+        runner = Runner()
+        runner.configure(settings)
+        return runner.run()
     except ConfigureError, e:
         print >> sys.stderr, "%s: %s" % (settings.appname, e)
     except Exception, e:

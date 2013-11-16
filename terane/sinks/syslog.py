@@ -20,7 +20,7 @@ from loggerglue import constants
 from loggerglue.emitter import UDPSyslogEmitter, TCPSyslogEmitter
 from loggerglue.rfc5424 import SyslogEntry
 from terane.plugin import IPlugin
-from terane.event import Event
+from terane.event import Event, FieldIdentifier
 from terane.settings import ConfigureError
 from terane.loggers import getLogger
 
@@ -30,6 +30,12 @@ class SyslogSink(IPlugin):
     """
     Send received events to a syslog server via TCP or UDP.
     """
+
+    FACILITY = FieldIdentifier('facility', FieldIdentifier.LITERAL)
+    SEVERITY = FieldIdentifier('severity', FieldIdentifier.LITERAL)
+    APPNAME = FieldIdentifier('appname', FieldIdentifier.LITERAL)
+    PROCID = FieldIdentifier('procid', FieldIdentifier.LITERAL)
+    MSGID = FieldIdentifier('msgid', FieldIdentifier.LITERAL)
 
     def __init__(self):
         self.factory = TCPSyslogEmitter
@@ -87,12 +93,12 @@ class SyslogSink(IPlugin):
         origin = event.origin(None)
         timestamp = event.timestamp(None)
         message = event.message(None)
-        facility = event.literal("facility", "daemon")
-        severity = event.literal("severity", "info")
+        severity = event.get(SyslogSink.SEVERITY, "info")
+        facility = event.get(SyslogSink.FACILITY, "daemon")
         prival = self._stringtoprival(facility, severity)
-        appname = event.literal("appname", None)
-        procid = event.literal("procid", None)
-        msgid = event.literal("msgid", None)
+        appname = event.get(SyslogSink.APPNAME, None)
+        procid = event.get(SyslogSink.PROCID, None)
+        msgid = event.get(SyslogSink.MSGID, None)
         msg = SyslogEntry(prival=prival,
                           timestamp=timestamp,
                           hostname=origin,

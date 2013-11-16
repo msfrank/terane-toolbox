@@ -22,6 +22,9 @@ logger = getLogger("terane.plugin")
 
 class IPlugin(object):
 
+    def __init__(self, *args, **kwargs):
+        pass
+
     def configure(self, section):
         pass
 

@@ -48,18 +48,28 @@ setup(
     packages=[
         'terane',
         'terane.api',
+        'terane.filters',
         'terane.sinks',
         'terane.sources',
         'terane.toolbox',
         'terane.toolbox.etl',
+        'terane.toolbox.run',
         'terane.toolbox.search',
         ],
     entry_points={
         'console_scripts': [
             #'terane=terane.toolbox.console:console_main',
             'terane-etl=terane.toolbox.etl:etl_main',
+            'terane-run=terane.toolbox.run:run_main',
             'terane-search=terane.toolbox.search:search_main',
             ],
+        'terane.plugin.pipeline': [
+            'stdin_source=terane.sources.file:StdinSource',
+            'syslog_sink=terane.sinks.syslog:SyslogSink',
+            'syslog_format=terane.filters.syslog_format:SyslogFormatFilter',
+            'log_debug=terane.filters.debug:DebugFilter',
+            'debug_sink=terane.sinks.debug:DebugSink',
+            ]
         },
     test_suite="tests",
     tests_require=["setuptools_trial"]

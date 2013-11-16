@@ -16,32 +16,37 @@
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-from terane.sources.file import StdinSource
-from terane.sinks.syslog import SyslogSink
 from terane.plugin import PluginManager
 from terane.pipeline import Pipeline, parsepipeline, makepipeline
+from terane.settings import ConfigureError
 from terane.loggers import getLogger, startLogging, StdoutHandler, DEBUG
 
-logger = getLogger('terane.toolbox.etl.etl')
+logger = getLogger('terane.toolbox.run.runner')
 
-class ETL(object):
+class Runner(object):
     """
-    ETL contains all of the logic necessary to perform an extract-transform-load.
+    Execute a pipeline.
     """
 
     def configure(self, settings):
         # load configuration
-        section = settings.section("etl")
-        # publish to the specified store
-        self.store = section.getString("store", "main")
+        section = settings.section("run")
         # configure pipeline
-        source = StdinSource()
-        source.configure(section)
-        sink = SyslogSink()
-        sink.configure(section)
         plugins = PluginManager()
-        nodes = parsepipeline(section.getString("filters", None))
-        self.pipeline = Pipeline(source, sink, makepipeline(nodes))
+        args = settings.args()
+        if len(args) > 0:
+            spec = " ".join(args)
+        else:
+            spec = section.getString("pipeline", None)
+        if spec == None:
+            raise ConfigureError("no pipeline was specified")
+        nodes = makepipeline(parsepipeline(spec))
+        if len(nodes) < 2:
+            raise ConfigureError("pipeline must consist of at least one source and one sink")
+        source = nodes.pop(0)
+        sink = nodes.pop(-1)
+        filters = nodes
+        self.pipeline = Pipeline(source, sink, filters)
         # configure server logging
         logconfigfile = section.getString('log config file', "%s.logconfig" % settings.appname)
         if section.getBoolean("debug", False):
@@ -52,4 +57,5 @@ class ETL(object):
     def run(self):
         logger.info("executing pipeline '%s'" % self.pipeline)
         self.pipeline.run()
+        logger.info("processed %i events, dropped %i" % (self.pipeline.processed, self.pipeline.dropped))
         return 0

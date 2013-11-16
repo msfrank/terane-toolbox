@@ -340,9 +340,12 @@ class Section(object):
         :param default: The value to return if a value is not found.
         :returns: The string value, or the default value.
         """
-        if not self._settings._config.has_option(self.name, name):
+        if self.name == None or not self._settings._config.has_option(self.name, name):
             return default
-        return self._settings._config.get(self.name, name).strip()
+        s = self._settings._config.get(self.name, name)
+        if s == None:
+            return default
+        return s.strip()
 
     def getInt(self, name, default=None):
         """
@@ -358,7 +361,9 @@ class Section(object):
         :param default: The value to return if a value is not found.
         :returns: The int value, or the default value.
         """
-        if not self._settings._config.has_option(self.name, name):
+        if self.name == None or not self._settings._config.has_option(self.name, name):
+            return default
+        if self._settings._config.get(self.name, name) == None:
             return default
         return self._settings._config.getint(self.name, name)
 
@@ -376,7 +381,9 @@ class Section(object):
         :param default: The value to return if a value is not found.
         :returns: The bool value, or the default value.
         """
-        if not self._settings._config.has_option(self.name, name):
+        if self.name == None or not self._settings._config.has_option(self.name, name):
+            return default
+        if self._settings._config.get(self.name, name) == None:
             return default
         return self._settings._config.getboolean(self.name, name)
 
@@ -394,7 +401,9 @@ class Section(object):
         :param default: The value to return if a value is not found.
         :returns: The float value, or the default value.
         """
-        if not self._settings._config.has_option(self.name, name):
+        if self.name == None or not self._settings._config.has_option(self.name, name):
+            return default
+        if self._settings._config.get(self.name, name) == None:
             return default
         return self._settings._config.getfloat(self.name, name)
 
@@ -413,9 +422,11 @@ class Section(object):
         :param default: The value to return if a value is not found.
         :returns: The string value, or the default value.
         """
-        if not self._settings._config.has_option(self.name, name):
+        if self.name == None or not self._settings._config.has_option(self.name, name):
             return default
         path = self._settings._config.get(self.name, name)
+        if path == None:
+            return default
         return os.path.normpath(os.path.join(self._settings._cwd, path))
 
     def getList(self, etype, name, default=None, delimiter=','):
@@ -437,9 +448,11 @@ class Section(object):
         :type delimiter: str
         :returns: The string value, or the default value.
         """
-        if not self._settings._config.has_option(self.name, name):
+        if self.name == None or not self._settings._config.has_option(self.name, name):
             return default
         l = self._settings._config.get(self.name, name)
+        if l == None:
+            return default
         try:
             return [etype(e.strip()) for e in l.split(delimiter)]
         except Exception, e:
@@ -447,12 +460,19 @@ class Section(object):
                 self.name, name, e))
 
     def set(self, name, value):
-        if value == None:
+        """
+        Modify the configuration setting.  value must be a string.
+        """
+        if not isinstance(value, str):
             raise ConfigureError("failed to modify configuration item [%s]=>%s: value is not a string" % (
             self.name, name))
         self._config.set(self.name, name, value)
 
     def remove(self, name):
+        """
+        Remove the configuration setting.  Internally this sets the configuration
+        value to None.
+        """
         self._config.set(self.name, name, None)
 
 class PipelineSettings(object):
@@ -465,13 +485,14 @@ class PipelineSettings(object):
         """
         self._config = RawConfigParser()
         self._cwd = os.getcwd()
+        self._nodes = list()
         index = 0
         for node in pipeline:
-            sectionname = "node:%i" % index
+            sectionname = "node%i:%s" % (index, node.name)
             self._config.add_section(sectionname)
             for key,value in node.params.items():
                 self._config.set(sectionname, key, value)
-            self._config.set(sectionname, "type", node.name)
+            self._nodes.append(sectionname)
             index += 1
 
     def hasSection(self, index):
@@ -483,7 +504,11 @@ class PipelineSettings(object):
         :returns: True or False.
         :rtype: [bool]
         """
-        return self._config.has_section("node:%i" % index)
+        try:
+            self._nodes[index]
+            return True
+        except IndexError:
+            return False
 
     def section(self, index):
         """
@@ -495,7 +520,11 @@ class PipelineSettings(object):
         :returns: The specified section.
         :rtype: :class:`Section`
         """
-        return Section("node:%i" % index, self)
+        try:
+            sectionname = self._nodes[index]
+            return Section(sectionname, self)
+        except IndexError:
+            return Section(None, self)
 
     def sections(self):
         """
@@ -505,8 +534,8 @@ class PipelineSettings(object):
         :rtype: :[class:`Section`]
         """
         sections = []
-        for name in sorted(self._config.sections()):
-            sections.append(Section(name, self))
+        for sectionname in self._nodes:
+            sections.append(Section(sectionname, self))
         return sections
 
 class _UnittestSettings(Settings):
