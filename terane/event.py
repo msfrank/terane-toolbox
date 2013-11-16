@@ -238,7 +238,7 @@ _stringifyfield = {
         FieldIdentifier.LITERAL: (lambda x: unicode(x)),
         FieldIdentifier.INTEGER: (lambda x: unicode(x)),
         FieldIdentifier.FLOAT: (lambda x: unicode(x)),
-        FieldIdentifier.DATETIME: (lambda x: unicode(mktime(x.timetuple()))),
+        FieldIdentifier.DATETIME: (lambda x: unicode(long(mktime(x.timetuple() * 1000.0)) + (x.microsecond / 1000.0) )),
         FieldIdentifier.ADDRESS: (lambda x: unicode(x)),
         FieldIdentifier.HOSTNAME: (lambda x: unicode(x)),
 }
