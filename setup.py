@@ -21,6 +21,7 @@ setup(
     # installation dependencies
     install_requires=[
         "Twisted >= 13.1.0",
+        "tornado >= 3.1.1",
         "pyparsing",
         "python-dateutil",
         "loggerglue",
@@ -53,6 +54,7 @@ setup(
         'terane.sources',
         'terane.toolbox',
         'terane.toolbox.etl',
+        'terane.toolbox.relay',
         'terane.toolbox.run',
         'terane.toolbox.search',
         ],
@@ -60,6 +62,7 @@ setup(
         'console_scripts': [
             #'terane=terane.toolbox.console:console_main',
             'terane-etl=terane.toolbox.etl:etl_main',
+            'terane-relay=terane.toolbox.relay:relay_main',
             'terane-run=terane.toolbox.run:run_main',
             'terane-search=terane.toolbox.search:search_main',
             ],

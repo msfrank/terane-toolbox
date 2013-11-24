@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
-__version__ = (0, 3, 1)
+__version__ = (0, 4, 0)
 
 def versionstring():
     """

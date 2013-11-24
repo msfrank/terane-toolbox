@@ -475,7 +475,7 @@ class Section(object):
         """
         self._config.set(self.name, name, None)
 
-class PipelineSettings(object):
+class NodespecSettings(object):
     """
     """
     def __init__(self, pipeline):

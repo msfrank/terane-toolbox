@@ -19,7 +19,7 @@ import sys
 from terane.sources.file import StdinSource
 from terane.sinks.syslog import SyslogSink
 from terane.plugin import PluginManager
-from terane.pipeline import Pipeline, parsepipeline, makepipeline
+from terane.pipeline import Pipeline, parsenodespec, makepipeline
 from terane.loggers import getLogger, startLogging, StdoutHandler, DEBUG
 
 logger = getLogger('terane.toolbox.etl.etl')
@@ -40,7 +40,7 @@ class ETL(object):
         sink = SyslogSink()
         sink.configure(section)
         plugins = PluginManager()
-        nodes = parsepipeline(section.getString("filters", None))
+        nodes = parsenodespec(section.getString("filters", None))
         self.pipeline = Pipeline(source, sink, makepipeline(nodes))
         # configure server logging
         logconfigfile = section.getString('log config file', "%s.logconfig" % settings.appname)

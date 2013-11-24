@@ -17,7 +17,7 @@
 
 import sys
 from terane.plugin import PluginManager
-from terane.pipeline import Pipeline, parsepipeline, makepipeline
+from terane.pipeline import Pipeline, parsenodespec, makepipeline
 from terane.settings import ConfigureError
 from terane.loggers import getLogger, startLogging, StdoutHandler, DEBUG
 
@@ -40,7 +40,7 @@ class Runner(object):
             spec = section.getString("pipeline", None)
         if spec == None:
             raise ConfigureError("no pipeline was specified")
-        nodes = makepipeline(parsepipeline(spec))
+        nodes = makepipeline(parsenodespec(spec))
         if len(nodes) < 2:
             raise ConfigureError("pipeline must consist of at least one source and one sink")
         source = nodes.pop(0)

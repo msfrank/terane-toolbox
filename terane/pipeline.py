@@ -17,7 +17,7 @@
 
 from pyparsing import *
 from terane.plugin import PluginManager
-from terane.settings import PipelineSettings
+from terane.settings import NodespecSettings
 from terane.loggers import getLogger
 
 logger = getLogger("terane.pipeline")
@@ -52,12 +52,67 @@ class NodeSpec(object):
     def __str__(self):
         return "NodeSpec(%s, %s)" % (self.name, self.params)
 
+def parsenodespec(spec):
+    """
+    Construct a :class:`NodeSpec` sequence from the supplied string spec.
+
+    :param spec: The pipeline specification
+    :type spec: str
+    :returns: A list of :class:`NodeSpec` elements comprising the pipeline.
+    :rtype: [:class:`NodeSpec`]
+    """
+    if spec == None or spec.strip() == "":
+        return list()
+    return nodeseq.parseString(spec, parseAll=False)
+
 class DropEvent(Exception):
     """
     If any node in a :class:`Pipeline` raises this exception, the currently
     processed event is dropped and the pipeline continues with the next event
     from the source.
     """
+
+class FilterChain(object):
+    """
+    A sequence of filters.
+    """
+    def __init__(self, filters):
+        self.filters = filters
+
+    def __str__(self):
+        return " ~> ".join([str(f) for f in self.filters])
+
+    def process(self, event):
+        """
+        Run the specified :class:`Event` through the filter chain, or raise
+        StopIteration.
+
+        :param event:
+        :type event: :class:`Event`
+        :returns: The next :class:`Event`
+        :rtype: :class:`Event`
+        :raises: StopIteration
+        """
+        for f in self.filters:
+            event = f.filter(event)
+        return event
+
+def makefilterchain(nodes, plugins=None):
+    """
+    Construct a :class:`FilterChain` from a node sequence.
+    """
+    if nodes == None or len(nodes) == 0:
+        return list()
+    if plugins == None:
+        plugins = PluginManager()
+    settings = NodespecSettings(nodes)
+    nodes = list()
+    for section in settings.sections():
+        nodeindex,pluginname = section.name.split(':', 1)
+        node = plugins.newinstance('terane.plugin.pipeline', pluginname)
+        node.configure(section)
+        nodes.append(node)
+    return nodes
 
 class Pipeline(object):
     """
@@ -120,7 +175,7 @@ class Pipeline(object):
                 try:
                     self._sink.consume(self._next())
                     self._processed += 1
-                except DropEvent:
+                except DropEvent, e:
                     logger.debug("dropped event: %s" % str(e))
                     self._dropped += 1
         except StopIteration:
@@ -139,20 +194,6 @@ class Pipeline(object):
     def dropped(self):
         return self._dropped
 
-
-def parsepipeline(spec):
-    """
-    Construct a :class:`NodeSpec` sequence from the supplied string spec.
-
-    :param spec: The pipeline specification
-    :type spec: str
-    :returns: A list of :class:`NodeSpec` elements comprising the pipeline.
-    :rtype: [:class:`NodeSpec`]
-    """
-    if spec == None or spec.strip() == "":
-        return list()
-    return nodeseq.parseString(spec, parseAll=False)
-
 def makepipeline(nodes, plugins=None):
     """
     Construct a :class:`Pipeline` from a node sequence.
@@ -161,7 +202,7 @@ def makepipeline(nodes, plugins=None):
         return list()
     if plugins == None:
         plugins = PluginManager()
-    settings = PipelineSettings(nodes)
+    settings = NodespecSettings(nodes)
     nodes = list()
     for section in settings.sections():
         nodeindex,pluginname = section.name.split(':', 1)
