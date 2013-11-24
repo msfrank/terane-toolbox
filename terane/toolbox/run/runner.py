@@ -33,7 +33,7 @@ class Runner(object):
         section = settings.section("run")
         # configure pipeline
         plugins = PluginManager()
-        args = settings.args()
+        args = settings.args
         if len(args) > 0:
             spec = " ".join(args)
         else:

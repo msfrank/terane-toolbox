@@ -23,7 +23,7 @@ from terane.api.store import DescribeStoreRequest, FindStoreRequest
 from terane.settings import Settings, ConfigureError
 from terane.loggers import getLogger, startLogging, StdoutHandler, DEBUG
 
-logger = getLogger('terane.toolbox.admin.showstore')
+logger = getLogger('terane.toolbox.admin.store.show')
 
 class Operation(object):
     """
@@ -38,7 +38,7 @@ class Operation(object):
         self.reverse = section.getBoolean("reverse query", False)
         if section.getBoolean("prompt password", False):
             self.password = getpass("Password: ")
-        (self.key,) = settings.args()
+        (self.key,) = settings.getArgs(str, names=["STORE"], maximum=1)
         # configure logging
         logconfigfile = section.getString('log config file', "%s.logconfig" % settings.appname)
         if section.getBoolean("debug", False):
@@ -95,7 +95,7 @@ def show_store_main():
             help="Prompt for a password"
             )
         settings.addSwitch("r", "reverse", "show-store", "reverse query",
-                           help="STORE is an id, instead of a name"
+                           help="STORE argument is an id, instead of a name"
         )
         settings.addOption('', "log-config", "show-store", "log config file",
             help="use logging configuration file FILE", metavar="FILE"

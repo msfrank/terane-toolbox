@@ -220,6 +220,16 @@ class Settings(Parser):
         self.addOption('c', 'config-file', 'settings', 'config file',
             help="Load configuration from FILE", metavar="FILE")
 
+    @property
+    def args(self):
+        """
+        Get the list of non-option arguments passed on the command line.
+
+        :returns: A list of argument strings.
+        :rtype: [str]
+        """
+        return list(self._args)
+
     def load(self, needsconfig=False):
         """
         Load configuration from the configuration file and from command-line arguments.
@@ -254,14 +264,53 @@ class Settings(Parser):
         """
         return self._parser._handler
 
-    def args(self):
+    def getArgs(self, *spec, **kwargs):
         """
-        Get the list of non-option arguments passed on the command line.
+        Returns a list containing arguments conforming to *spec.  if the number of
+        command arguments is less than minimum or greater than maximum, or if any
+        argument cannot be validated, ConfigureError is raised.  Any optional arguments
+        which are not specified are set to None.
 
-        :returns: A list of argument strings.
-        :rtype: [str]
+        :param spec: a list of validator functions
+        :type spec: [callable]
+        :param minimum: The number of required arguments
+        :type: int
+        :param maximum: The numer of required + optional arguments
+        :type maxmimum: int
+        :param names: a list of argument names corresponding to each validator
+        :type names: [str]
+        :returns: a list containing arguments conforming to spec
+        :rtype: [object]
         """
-        return list(self._args)
+        try:
+            minimum = kwargs['minimum']
+        except:
+            minimum = None
+        try:
+            maximum = kwargs['maximum']
+        except:
+            maximum = None
+        try:
+            names = kwargs['names']
+        except:
+            names = None
+        if maximum != None and len(self._args) > maximum:
+            raise ConfigureError("extra trailing arguments")
+        args = [None for _ in range(len(spec))]
+        for i in range(len(spec)):
+            try:
+                validator = spec[i]
+                args[i] = validator(self._args[i])
+            except IndexError:
+                if minimum == None or i < minimum:
+                    if names != None:
+                        raise ConfigureError("missing argument " + names[i])
+                    raise ConfigureError("missing argument")
+            except Exception, e:
+                if names != None:
+                    raise ConfigureError("failed to parse argument %s: %s" % (names[i], str(e)))
+                raise ConfigureError("failed to parse argument: %s" % str(e))
+        return args
 
     def hasSection(self, name):
         """

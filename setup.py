@@ -54,6 +54,7 @@ setup(
         'terane.sources',
         'terane.toolbox',
         'terane.toolbox.admin',
+        'terane.toolbox.admin.store',
         'terane.toolbox.etl',
         'terane.toolbox.relay',
         'terane.toolbox.run',
@@ -66,7 +67,7 @@ setup(
             'terane-relay=terane.toolbox.relay:relay_main',
             'terane-run=terane.toolbox.run:run_main',
             'terane-search=terane.toolbox.search:search_main',
-            'terane-show-store=terane.toolbox.admin.showstore:show_store_main',
+            'terane-show-store=terane.toolbox.admin.store.show:show_store_main',
             ],
         'terane.plugin.pipeline': [
             'stdin_source=terane.sources.file:StdinSource',

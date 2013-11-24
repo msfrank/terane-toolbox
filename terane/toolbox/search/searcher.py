@@ -53,7 +53,7 @@ class Searcher(object):
         if self.tz != None:
             self.tz = dateutil.tz.gettz(self.tz)
         # concatenate the command args into the query string
-        self.query = ' '.join(settings.args())
+        self.query = ' '.join(settings.args)
         # configure server logging
         logconfigfile = section.getString('log config file', "%s.logconfig" % settings.appname)
         if section.getBoolean("debug", False):
