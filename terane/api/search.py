@@ -75,13 +75,15 @@ class SearchRequest(object):
         return deferred
 
     def queryCreated(self, response, agent, context, deferred):
+        logger.debug("received response %s %s with headers: %s" % (response.code, response.phrase, response.headers))
         if response.code != 201:
-            raise Exception("received non-OK response from server")
+            raise Exception("received error response from server")
         response = readBody(response)
         response.addCallback(self.getQuery, agent, context, deferred)
         response.addErrback(self.handleError, agent, context, deferred)
 
     def getQuery(self, entity, agent, context, deferred):
+        logger.debug("received response body: %s" % str(entity))
         query = json.loads(entity)
         queryid = str(query["id"])
         logger.debug("created query %s" % queryid)
@@ -91,8 +93,9 @@ class SearchRequest(object):
         request.addErrback(self.handleError, agent, context, deferred)
 
     def getEvents(self, response, agent, context, deferred):
+        logger.debug("received response %s %s with headers: %s" % (response.code, response.phrase, response.headers))
         if response.code != 200:
-            raise Exception("received non-OK response from server")
+            raise Exception("received error response from server")
         logger.debug("received events")
         response = readBody(response)
         response.addCallback(self.processResult, agent, context, deferred)
