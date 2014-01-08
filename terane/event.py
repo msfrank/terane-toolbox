@@ -22,7 +22,7 @@ from dateutil.tz import tzutc
 
 class FieldIdentifier(object):
     """
-    Field name and type which uniquely identifies a field in a store.
+    Field name and type which uniquely identifies a field in a sink.
     """
 
     TEXT      = 1

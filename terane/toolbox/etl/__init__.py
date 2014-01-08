@@ -28,7 +28,7 @@ def etl_main():
         settings.addOption("f", "filters", "etl", "filters",
             help="use filter pipeline SPEC", metavar="SPEC"
             )
-        settings.addOption("s", "store", "etl", "store",
+        settings.addOption("s", "sink", "etl", "sink",
             help="publish events to the specified STORE", metavar="STORE"
             )
         settings.addOption('', "log-config", "etl", "log config file",

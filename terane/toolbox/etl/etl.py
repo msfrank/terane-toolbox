@@ -32,8 +32,8 @@ class ETL(object):
     def configure(self, settings):
         # load configuration
         section = settings.section("etl")
-        # publish to the specified store
-        self.store = section.getString("store", "main")
+        # publish to the specified sink
+        self.store = section.getString("sink", "main")
         # configure pipeline
         source = StdinSource()
         source.configure(section)

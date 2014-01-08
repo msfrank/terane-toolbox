@@ -19,11 +19,11 @@ import sys, traceback, urlparse
 from getpass import getpass
 from twisted.internet import reactor
 from terane.api.context import ApiContext
-from terane.api.store import DescribeStoreRequest, FindStoreRequest
+from terane.api.sink import EnumerateSinksRequest
 from terane.settings import Settings, ConfigureError
 from terane.loggers import getLogger, startLogging, StdoutHandler, DEBUG
 
-logger = getLogger('terane.toolbox.admin.store.show')
+logger = getLogger('terane.toolbox.admin.sink.list')
 
 class Operation(object):
     """
@@ -31,14 +31,12 @@ class Operation(object):
 
     def configure(self, settings):
         # load configuration
-        section = settings.section("show-store")
+        section = settings.section("list-sinks")
         self.host = urlparse.urlparse(section.getString("host", 'http://localhost:8080'))
         self.username = section.getString("username", None)
         self.password = section.getString("password", None)
-        self.reverse = section.getBoolean("reverse query", False)
         if section.getBoolean("prompt password", False):
             self.password = getpass("Password: ")
-        (self.key,) = settings.getArgs(str, names=["STORE"], maximum=1)
         # configure logging
         logconfigfile = section.getString('log config file', "%s.logconfig" % settings.appname)
         if section.getBoolean("debug", False):
@@ -46,15 +44,16 @@ class Operation(object):
         else:
             startLogging(None)
 
-    def printResult(self, stats):
-        if self.reverse:
-            print '"' + stats.store + '"'
-            print "  name: " + stats.name
-            print "  created: " + stats.created.isoformat()
-        else:
-            print '"' + stats.name + '"'
-            print "  id: " + stats.store
-            print "  created: " + stats.created.isoformat()
+    def printResult(self, sinks):
+        for sink in sinks:
+            name = sink['name']
+            del sink['name']
+            print "  name: " + name
+            sinkType = sink['sinkType']
+            del sink['sinkType']
+            print "  type: " + sinkType
+            for key,value in sorted(sink.items()):
+                print "    %s: %s" % (key,value)
         reactor.stop()
 
     def printError(self, failure):
@@ -65,42 +64,39 @@ class Operation(object):
             logger.debug("caught exception: %s" % s.getvalue())
             raise failure.value
         except ValueError, e:
-            print "Search failed: remote server returned HTTP status %s: %s" % e.args
+            print "Operation failed: remote server returned HTTP status %s: %s" % e.args
         except BaseException, e:
-            print "Search failed: %s" % str(e)
+            print "Operation failed: %s" % str(e)
         reactor.stop()
 
     def run(self):
         context = ApiContext(self.host)
-        request = FindStoreRequest(self.key) if not self.reverse else DescribeStoreRequest(self.key)
+        request = EnumerateSinksRequest()
         deferred = request.execute(context)
         deferred.addCallback(self.printResult)
         deferred.addErrback(self.printError)
         reactor.run()
         return 0
 
-def show_store_main():
+def list_sinks_main():
     try:
-        settings = Settings(usage="[OPTIONS...] STORE")
-        settings.addOption("H", "host", "show-store", "host",
+        settings = Settings(usage="[OPTIONS...] NAME")
+        settings.addOption("H", "host", "list-sinks", "host",
             help="Connect to terane server HOST", metavar="HOST"
             )
-        settings.addOption("u", "username", "show-store", "username",
+        settings.addOption("u", "username", "list-sinks", "username",
             help="Authenticate with username USER", metavar="USER"
             )
-        settings.addOption("p", "password", "show-store", "password",
+        settings.addOption("p", "password", "list-sinks", "password",
             help="Authenticate with password PASS", metavar="PASS"
             )
-        settings.addSwitch("P", "prompt-password", "show-store", "prompt password",
+        settings.addSwitch("P", "prompt-password", "list-sinks", "prompt password",
             help="Prompt for a password"
             )
-        settings.addSwitch("r", "reverse", "show-store", "reverse query",
-                           help="STORE argument is an id, instead of a name"
-        )
-        settings.addOption('', "log-config", "show-store", "log config file",
+        settings.addOption('', "log-config", "list-sinks", "log config file",
             help="use logging configuration file FILE", metavar="FILE"
             )
-        settings.addSwitch("d", "debug", "show-store", "debug",
+        settings.addSwitch("d", "debug", "list-sinks", "debug",
             help="Print debugging information"
             )
         # load configuration

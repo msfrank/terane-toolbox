@@ -34,8 +34,8 @@ def search_main():
         settings.addSwitch("P", "prompt-password", "search", "prompt password",
             help="Prompt for a password"
             )
-        settings.addOption("s", "source", "search", "source",
-            help="Search the specified SOURCE", metavar="SOURCE"
+        settings.addOption("s", "store", "search", "store",
+            help="Search the specified STORE", metavar="STORE"
             )
         settings.addSwitch("v", "verbose", "search", "long format",
             help="Display more information about each event"
