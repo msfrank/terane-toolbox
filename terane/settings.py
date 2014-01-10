@@ -29,6 +29,8 @@ class ConfigureError(Exception):
     pass
 
 class Option(object):
+    """
+    """
     def __init__(self, shortname, longname, section, override, help=None, metavar=None):
         self.shortname = shortname
         self.shortident = "%s:" % shortname
@@ -40,6 +42,8 @@ class Option(object):
         self.metavar = metavar
 
 class Switch(Option):
+    """
+    """
     def __init__(self, shortname, longname, section, override, reverse=False, help=None):
         Option.__init__(self, shortname, longname, section, override, help)
         self.shortident = shortname
@@ -47,24 +51,36 @@ class Switch(Option):
         self.reverse = reverse
 
 class Parser(object):
-    def __init__(self, name, usage, description, parent=None, handler=None):
+    """
+    """
+    def __init__(self, parent, name, usage, description, subusage):
+        self._parent = parent
         self.name = name
         self.usage = usage
         self.description = description
-        self._parent = parent
-        self._handler = handler
+        self.subusage = subusage
         self._subcommands = {}
         self._options = {}
         self._optslist = []
 
-    def addSubcommand(self, name, usage, description, handler=None):
+    def addSubcommand(self, name, usage, description, subusage='Available subcommands:'):
+        """
+        """
         if name in self._subcommands:
             raise ConfigureError("subcommand '%s' is already defined" % name)
-        subcommand = Parser(name, usage, description, self, handler)
+        subcommand = Parser(self, name, usage, description, subusage)
         self._subcommands[name] = subcommand
         return subcommand
 
-    def addOption(self, shortname, longname, section, override, help=None, metavar=None):
+    def _lookupSection(self):
+        sections = list()
+        parser = self
+        while parser is not None:
+            sections.insert(0, parser.name)
+            parser = parser._parent
+        return ':'.join(sections)
+
+    def addOption(self, shortname, longname, override, section=None, help=None, metavar=None):
         """
         Add a command-line option to be parsed.  An option (as opposed to a switch)
         is required to have an argument.
@@ -73,8 +89,10 @@ class Parser(object):
         :type shortname: str
         :param longname: the long option name.
         :type longname: str
-        :param override: A tuple specifying the section:name.
-        :type override: (str,str)
+        :param override: Override the specified section key.
+        :type override: str
+        :param section: Override the key in the specified section.
+        :type section: str
         :param help: The help string, displayed in --help output.
         :type help: str
         :param metavar: The variable displayed in the help string
@@ -84,12 +102,19 @@ class Parser(object):
             raise ConfigureError("-%s is already defined" % shortname)
         if longname in self._options:
             raise ConfigureError("--%s is already defined" % longname)
+        section = self._lookupSection() if section is None else section
         o = Option(shortname, longname, section, override, help, metavar)
         self._options["-%s" % shortname] = o
         self._options["--%s" % longname] = o
         self._optslist.append(o)
 
-    def addSwitch(self, shortname, longname, section, override, reverse=False, help=None):
+    def addShortOption(self, shortname, override, section=None, help=None, metavar=None):
+        return self.addOption(shortname, '', override, section, help, metavar)
+
+    def addLongOption(self, longname, override, section=None, help=None, metavar=None):
+        return self.addOption('', longname, override, section, help, metavar)
+
+    def addSwitch(self, shortname, longname, override, section=None, reverse=False, help=None):
         """
         Add a command-line switch to be parsed.  A switch (as opposed to an option)
         has no argument.
@@ -98,8 +123,10 @@ class Parser(object):
         :type shortname: str
         :param longname: the long option name.
         :type longname: str
-        :param override: A tuple specifying the section:name.
-        :type override: (str,str)
+        :param override: Override the specified section key.
+        :type override: str
+        :param section: Override the key in the specified section.
+        :type section: str
         :param reverse: If True, then the meaning of the switch is reversed.
         :type reverse: bool
         :param help: The help string, displayed in --help output.
@@ -109,10 +136,17 @@ class Parser(object):
             raise ConfigureError("-%s is already defined" % shortname)
         if longname in self._options:
             raise ConfigureError("--%s is already defined" % longname)
+        section = self._lookupSection() if section is None else section
         s = Switch(shortname, longname, section, override, reverse, help)
         self._options["-%s" % shortname] = s
         self._options["--%s" % longname] = s
         self._optslist.append(s)
+
+    def addShortSwitch(self, shortname, override, section=None, reverse=False, help=None):
+        return self.addSwitch(shortname, '', override, section, reverse, help)
+
+    def addLongSwitch(self, longname, override, section=None, reverse=False, help=None):
+        return self.addSwitch('', longname, override, section, reverse, help)
 
     def _parse(self, argv, store):
         """
@@ -142,10 +176,14 @@ class Parser(object):
         if len(self._subcommands) > 0:
             if len(args) == 0:
                 raise ConfigureError("no subcommand specified")
-            if not args[0] in self._subcommands:
-                raise ConfigureError("no subcommand named '%s'" % args[0])
-            return self._subcommands[args[0]]._parse(args[1:], store)
-        return self, args
+            subcommand = args[0]
+            args = args[1:]
+            if not subcommand in self._subcommands:
+                raise ConfigureError("no subcommand named '%s'" % subcommand)
+            stack,args = self._subcommands[subcommand]._parse(args, store)
+            stack.append(subcommand)
+            return stack,args
+        return [self.name], args
 
     def _usage(self):
         """
@@ -184,7 +222,7 @@ class Parser(object):
             print
         # display subcommands, if there are any
         if len(self._subcommands) > 0:
-            print "Available Sub-commands:"
+            print self.subusage
             print
             for name,parser in sorted(self._subcommands.items()):
                 print " %s" % name
@@ -192,6 +230,9 @@ class Parser(object):
         sys.exit(0)
 
     def _version(self):
+        """
+        Display the version and exit.
+        """
         c = self
         while c._parent != None: c = c._parent
         print "%s %s" % (c.name, versionstring())
@@ -203,32 +244,28 @@ class Settings(Parser):
     parsed from command-line arguments.
     """
 
-    def __init__(self, usage='', description=''):
+    def __init__(self, usage, description, subusage='Available subcommands:', section=None, appname=None, confbase='/etc/terane/'):
         """
         :param usage: The usage string, displayed in --help output
         :type usage: str
         :param description: A short application description, displayed in --help output
         :type description: str
+        :param subusage: If subcommands are specified, then display this message above
+        :type subusage: str
         """
-        self.appname = os.path.basename(sys.argv[0])
-        Parser.__init__(self, self.appname, usage, description)
+        self.appname = appname if appname is not None else os.path.basename(sys.argv[0])
+        self._section = self.appname if section is None else section
+        self.confbase = os.path.abspath(confbase)
+        Parser.__init__(self, None, self._section, usage, description, subusage)
         self._config = RawConfigParser()
         self._overrides = RawConfigParser()
         self._cwd = os.getcwd()
         self._overrides.add_section('settings')
-        self._overrides.set('settings', 'config file', "/etc/terane/%s.conf" % self.appname)
+        self._overrides.set('settings', 'config file', os.path.join(self.confbase, "%s.conf" % self.appname))
         self.addOption('c', 'config-file', 'settings', 'config file',
             help="Load configuration from FILE", metavar="FILE")
-
-    @property
-    def args(self):
-        """
-        Get the list of non-option arguments passed on the command line.
-
-        :returns: A list of argument strings.
-        :rtype: [str]
-        """
-        return list(self._args)
+        self._stack = []
+        self._args = []
 
     def load(self, needsconfig=False):
         """
@@ -239,7 +276,7 @@ class Settings(Parser):
         """
         try:
             # parse command line arguments
-            self._parser,self._args = self._parse(sys.argv[1:], self._overrides)
+            self._stack,self._args = self._parse(sys.argv[1:], self._overrides)
             # load configuration file
             config_file = self._overrides.get('settings', 'config file')
             path = os.path.normpath(os.path.join(self._cwd, config_file))
@@ -250,19 +287,14 @@ class Settings(Parser):
             raise ConfigureError(str(e))
         except EnvironmentError, e:
             if needsconfig:
-                raise ConfigureError("failed to read configuration %s: %s" % (path,e.strerror))
-            logger.info("didn't load configuration %s: %s" % (path,e.strerror))
+                raise ConfigureError("failed to read configuration: %s" % e.strerror)
+            logger.info("didn't load configuration: %s" % e.strerror)
         # merge command line settings with config file settings
         for section in self._overrides.sections():
             for name,value in self._overrides.items(section):
                 if not self._config.has_section(section):
                     self._config.add_section(section)
                 self._config.set(section, name, str(value))
-
-    def getHandler(self):
-        """
-        """
-        return self._parser._handler
 
     def getArgs(self, *spec, **kwargs):
         """
@@ -311,6 +343,9 @@ class Settings(Parser):
                     raise ConfigureError("failed to parse argument %s: %s" % (names[i], str(e)))
                 raise ConfigureError("failed to parse argument: %s" % str(e))
         return args
+
+    def getStack(self):
+        return
 
     def hasSection(self, name):
         """

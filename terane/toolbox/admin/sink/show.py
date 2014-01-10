@@ -79,25 +79,25 @@ class Operation(object):
         return 0
 
 def show_sink_main():
+    settings = Settings(usage="[OPTIONS...] NAME", description="Describe the specified cluster sink")
     try:
-        settings = Settings(usage="[OPTIONS...] NAME")
-        settings.addOption("H", "host", "show-sink", "host",
-            help="Connect to terane server HOST", metavar="HOST"
+        settings.addOption("H", "host",
+            override="host", help="Connect to terane server HOST", metavar="HOST"
             )
-        settings.addOption("u", "username", "show-sink", "username",
-            help="Authenticate with username USER", metavar="USER"
+        settings.addOption("u", "username",
+            override="username", help="Authenticate with username USER", metavar="USER"
             )
-        settings.addOption("p", "password", "show-sink", "password",
-            help="Authenticate with password PASS", metavar="PASS"
+        settings.addOption("p", "password",
+            override="password", help="Authenticate with password PASS", metavar="PASS"
             )
-        settings.addSwitch("P", "prompt-password", "show-sink", "prompt password",
-            help="Prompt for a password"
+        settings.addSwitch("P", "prompt-password",
+            override="prompt password", help="Prompt for a password"
             )
-        settings.addOption('', "log-config", "show-sink", "log config file",
-            help="use logging configuration file FILE", metavar="FILE"
+        settings.addOption('', "log-config",
+            override="log config file", help="use logging configuration file FILE", metavar="FILE"
             )
-        settings.addSwitch("d", "debug", "show-sink", "debug",
-            help="Print debugging information"
+        settings.addSwitch("d", "debug",
+            override="debug", help="Print debugging information"
             )
         # load configuration
         settings.load()

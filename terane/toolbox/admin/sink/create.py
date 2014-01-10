@@ -72,7 +72,7 @@ class Operation(object):
 
     def run(self):
         context = ApiContext(self.host)
-        request = CreateSinkRequest(self.settings)
+        request = CreateSinkRequest(self.sink)
         deferred = request.execute(context)
         deferred.addCallback(self.printResult)
         deferred.addErrback(self.printError)
@@ -80,37 +80,35 @@ class Operation(object):
         return 0
 
 def create_sink_main():
+    settings = Settings(
+        usage="[OPTIONS...] SINKTYPE [SINKOPTIONS...] NAME",
+        description="Create a cluster sink",
+        subusage="Available sink types:"
+    )
     try:
         # global options
-        settings = Settings(
-            usage="[OPTIONS...] SINKTYPE [SINKOPTIONS...] NAME",
-            subusage="Available sink types:"
+        settings.addOption("H", "host",
+            override="host", help="Connect to terane server HOST", metavar="HOST"
             )
-        settings.addOption("H", "host", "create-sink", "host",
-            help="Connect to terane server HOST", metavar="HOST"
+        settings.addOption("u", "username",
+            override="username", help="Authenticate with username USER", metavar="USER"
             )
-        settings.addOption("u", "username", "create-sink", "username",
-            help="Authenticate with username USER", metavar="USER"
+        settings.addOption("p", "password",
+            override="password", help="Authenticate with password PASS", metavar="PASS"
             )
-        settings.addOption("p", "password", "create-sink", "password",
-            help="Authenticate with password PASS", metavar="PASS"
+        settings.addSwitch("P", "prompt-password",
+            override="prompt password", help="Prompt for a password"
             )
-        settings.addSwitch("P", "prompt-password", "create-sink", "prompt password",
-            help="Prompt for a password"
+        settings.addOption('', "log-config",
+            override="log config file", help="use logging configuration file FILE", metavar="FILE"
             )
-        settings.addOption('', "log-config", "create-sink", "log config file",
-            help="use logging configuration file FILE", metavar="FILE"
-            )
-        settings.addSwitch("d", "debug", "create-sink", "debug",
-            help="Print debugging information"
+        settings.addSwitch("d", "debug",
+            override="debug", help="Print debugging information"
             )
         # cassandra specific options
-        cassandra = settings.addSubcommand("cassandra",
-            usage="[SINKOPTIONS...] NAME",
-            description="Create a new Cassandra sink"
-            )
-        cassandra.addOption('f', "flush-interval", "create-sink:cassandra", "flush interval",
-            help="Use flush interval MILLIS", metavar="MILLIS"
+        cassandra = settings.addSubcommand("cassandra", usage="[SINKOPTIONS...] NAME", description="Create a new Cassandra sink")
+        cassandra.addOption('f', "flush-interval",
+            override="flush interval", help="Use flush interval MILLIS", metavar="MILLIS"
             )
 
         # load configuration

@@ -20,13 +20,16 @@ from terane.toolbox.run.runner import Runner
 from terane.settings import Settings, ConfigureError
 
 def run_main():
+    settings = Settings(
+        usage="[OPTIONS...] PIPELINE",
+        description="Run the specified pipeline",
+        section="run")
     try:
-        settings = Settings(usage="[OPTIONS...] PIPELINE")
-        settings.addOption('', "log-config", "run", "log config file",
-            help="use logging configuration file FILE", metavar="FILE"
+        settings.addLongOption("log-config",
+            override="log config file", help="use logging configuration file FILE", metavar="FILE"
             )
-        settings.addSwitch("d", "debug", "run", "debug",
-            help="Print debugging information"
+        settings.addSwitch("d", "debug",
+            override="debug", help="Print debugging information"
             )
         # load configuration
         settings.load()

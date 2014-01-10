@@ -20,22 +20,25 @@ from terane.toolbox.etl.etl import ETL
 from terane.settings import Settings, ConfigureError
 
 def etl_main():
+    settings = Settings(
+        usage="[OPTIONS...] PIPELINE [ - | FILE...]",
+        description="Process the specified ETL pipeline",
+        section="etl")
     try:
-        settings = Settings(usage="[OPTIONS...] PIPELINE [ - | FILE...]")
-        settings.addOption("H", "host", "etl", "host",
-            help="connect to syslog server HOST", metavar="HOST"
+        settings.addOption("H", "host",
+            override="host", help="connect to syslog server HOST", metavar="HOST"
             )
-        settings.addOption("f", "filters", "etl", "filters",
-            help="use filter pipeline SPEC", metavar="SPEC"
+        settings.addOption("f", "filters",
+            override="filters", help="use filter pipeline SPEC", metavar="SPEC"
             )
-        settings.addOption("s", "sink", "etl", "sink",
-            help="publish events to the specified STORE", metavar="STORE"
+        settings.addOption("s", "sink",
+            override="sink", help="publish events to the specified STORE", metavar="STORE"
             )
-        settings.addOption('', "log-config", "etl", "log config file",
-            help="use logging configuration file FILE", metavar="FILE"
+        settings.addLongOption("log-config",
+            override="log config file", help="use logging configuration file FILE", metavar="FILE"
             )
-        settings.addSwitch("d", "debug", "etl", "debug",
-            help="Print debugging information"
+        settings.addSwitch("d", "debug",
+            override="debug", help="Print debugging information"
             )
         # load configuration
         settings.load()

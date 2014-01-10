@@ -20,16 +20,19 @@ from terane.toolbox.relay.server import Server
 from terane.settings import Settings, ConfigureError
 
 def relay_main():
+    settings = Settings(
+        usage="[OPTIONS...]",
+        description="Logging event relay",
+        section="relay")
     try:
-        settings = Settings(usage="[OPTIONS...]")
-        settings.addOption('n', "nprocs", "syslog", "num processes",
-            help="create NUM child processes", metavar="NUM"
+        settings.addOption('n', "nprocs",
+            override="num processes", help="create NUM child processes", metavar="NUM"
             )
-        settings.addOption('', "log-config", "syslog", "log config file",
-            help="use logging configuration file FILE", metavar="FILE"
+        settings.addLongOption("log-config",
+            override="log config file", help="use logging configuration file FILE", metavar="FILE"
             )
-        settings.addSwitch("d", "debug", "syslog", "debug",
-            help="Print debugging information"
+        settings.addSwitch("d", "debug",
+            override="debug", help="Print debugging information"
             )
         # load configuration
         settings.load()

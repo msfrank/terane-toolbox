@@ -20,43 +20,46 @@ from terane.toolbox.search.searcher import Searcher
 from terane.settings import Settings, ConfigureError
 
 def search_main():
+    settings = Settings(
+        usage="[OPTIONS...] QUERY",
+        description="Search a terane cluster",
+        section="search")
     try:
-        settings = Settings(usage="[OPTIONS...] QUERY")
-        settings.addOption("H", "host", "search", "host",
-            help="Connect to terane server HOST", metavar="HOST"
+        settings.addOption("H", "host",
+            override="host", help="Connect to terane server HOST", metavar="HOST"
             )
-        settings.addOption("u", "username", "search", "username",
-            help="Authenticate with username USER", metavar="USER"
+        settings.addOption("u", "username",
+            override="username", help="Authenticate with username USER", metavar="USER"
             )
-        settings.addOption("p", "password", "search", "password",
-            help="Authenticate with password PASS", metavar="PASS"
+        settings.addOption("p", "password",
+            override="password", help="Authenticate with password PASS", metavar="PASS"
             )
-        settings.addSwitch("P", "prompt-password", "search", "prompt password",
-            help="Prompt for a password"
+        settings.addSwitch("P", "prompt-password",
+            override="prompt password", help="Prompt for a password"
             )
-        settings.addOption("s", "store", "search", "store",
-            help="Search the specified STORE", metavar="STORE"
+        settings.addOption("s", "store",
+            override="store", help="Search the specified STORE", metavar="STORE"
             )
-        settings.addSwitch("v", "verbose", "search", "long format",
-            help="Display more information about each event"
+        settings.addSwitch("v", "verbose",
+            override="long format", help="Display more information about each event"
             )
-        settings.addSwitch("r", "reverse", "search", "display reverse",
-            help="Display events in reverse order (newest first)"
+        settings.addSwitch("r", "reverse",
+            override="display reverse", help="Display events in reverse order (newest first)"
             )
-        settings.addOption("l", "limit", "search", "limit",
-            help="Display the first LIMIT results", metavar="LIMIT"
+        settings.addOption("l", "limit",
+            override="limit", help="Display the first LIMIT results", metavar="LIMIT"
             )
-        settings.addOption("f", "fields", "search", "display fields",
-            help="Display only the specified FIELDS (comma-separated)", metavar="FIELDS"
+        settings.addOption("f", "fields",
+            override="display fields", help="Display only the specified FIELDS (comma-separated)", metavar="FIELDS"
             )
-        settings.addOption("t", "timezone", "search", "timezone",
-            help="Convert timestamps to specified timezone", metavar="TZ"
+        settings.addOption("t", "timezone",
+            override="timezone", help="Convert timestamps to specified timezone", metavar="TZ"
             )
-        settings.addOption('', "log-config", "search", "log config file",
-            help="use logging configuration file FILE", metavar="FILE"
+        settings.addLongOption("log-config",
+            override="log config file", help="use logging configuration file FILE", metavar="FILE"
             )
-        settings.addSwitch("d", "debug", "search", "debug",
-            help="Print debugging information"
+        settings.addSwitch("d", "debug",
+            override="debug", help="Print debugging information"
             )
         # load configuration
         settings.load()
