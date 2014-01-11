@@ -30,6 +30,7 @@ class ConfigureError(Exception):
 
 class Option(object):
     """
+    A command line option.
     """
     def __init__(self, shortname, longname, section, override, help=None, metavar=None):
         self.shortname = shortname
@@ -43,6 +44,7 @@ class Option(object):
 
 class Switch(Option):
     """
+    A command line switch.
     """
     def __init__(self, shortname, longname, section, override, reverse=False, help=None):
         Option.__init__(self, shortname, longname, section, override, help)
@@ -54,6 +56,18 @@ class Parser(object):
     """
     """
     def __init__(self, parent, name, usage, description, subusage):
+        """
+        :param parent:
+        :type parent: :class:`Parser`
+        :param name:
+        :type name: str
+        :param usage:
+        :type usage: str
+        :param description:
+        :type description: str
+        :param subusage:
+        :type subusage: str
+        """
         self._parent = parent
         self.name = name
         self.usage = usage
@@ -65,6 +79,16 @@ class Parser(object):
 
     def addSubcommand(self, name, usage, description, subusage='Available subcommands:'):
         """
+        Add a subcommand to the parser.
+
+        :param name:
+        :type name: str
+        :param usage:
+        :type usage: str
+        :param description:
+        :type description: str
+        :param subusage:
+        :type subusage: str
         """
         if name in self._subcommands:
             raise ConfigureError("subcommand '%s' is already defined" % name)
@@ -255,33 +279,37 @@ class Settings(Parser):
         """
         self.appname = appname if appname is not None else os.path.basename(sys.argv[0])
         self._section = self.appname if section is None else section
-        self.confbase = os.path.abspath(confbase)
-        Parser.__init__(self, None, self._section, usage, description, subusage)
-        self._config = RawConfigParser()
-        self._overrides = RawConfigParser()
+        self._confbase = os.path.abspath(confbase)
         self._cwd = os.getcwd()
-        self._overrides.add_section('settings')
-        self._overrides.set('settings', 'config file', os.path.join(self.confbase, "%s.conf" % self.appname))
-        self.addOption('c', 'config-file', 'settings', 'config file',
-            help="Load configuration from FILE", metavar="FILE")
-        self._stack = []
-        self._args = []
+        Parser.__init__(self, None, self._section, usage, description, subusage)
+        self.addOption('c', 'config-file', 'config file',
+            section=self._section, help="Load configuration from FILE", metavar="FILE"
+            )
 
-    def load(self, needsconfig=False):
+    def parse(self, argv=None, needsconfig=False):
         """
         Load configuration from the configuration file and from command-line arguments.
 
+        :param argv: The argument vector, or None to use sys.argv
+        :type argv: [str]
         :param needsconfig: True if the config file must be present for the application to function.
         :type needsconfig: bool
+        :returns: A :class:`Namespace` object with the parsed settings
+        :rtype: :class:`Namespace`
         """
         try:
+            argv = argv if argv is not None else sys.argv
+            overrides = RawConfigParser()
+            overrides.add_section(self._section)
+            overrides.set(self._section, 'config file', os.path.join(self._confbase, "%s.conf" % self.appname))
             # parse command line arguments
-            self._stack,self._args = self._parse(sys.argv[1:], self._overrides)
+            stack,args = self._parse(argv[1:], overrides)
             # load configuration file
-            config_file = self._overrides.get('settings', 'config file')
+            config_file = overrides.get(self._section, 'config file')
             path = os.path.normpath(os.path.join(self._cwd, config_file))
+            options = RawConfigParser()
             with open(path, 'r') as f:
-                self._config.readfp(f, path)
+                options.readfp(f, path)
             logger.debug("loaded settings from %s" % path)
         except getopt.GetoptError, e:
             raise ConfigureError(str(e))
@@ -290,11 +318,34 @@ class Settings(Parser):
                 raise ConfigureError("failed to read configuration: %s" % e.strerror)
             logger.info("didn't load configuration: %s" % e.strerror)
         # merge command line settings with config file settings
-        for section in self._overrides.sections():
-            for name,value in self._overrides.items(section):
-                if not self._config.has_section(section):
-                    self._config.add_section(section)
-                self._config.set(section, name, str(value))
+        for section in overrides.sections():
+            for name,value in overrides.items(section):
+                if not options.has_section(section):
+                    options.add_section(section)
+                options.set(section, name, str(value))
+        return Namespace(stack, options, args, self.appname, self._cwd)
+
+class Namespace(object):
+    """
+    """
+    def __init__(self, stack, options, args, appname, cwd):
+        """
+        :param stack:
+        :type stack: [str]
+        :param options:
+        :type options: :class:`ConfigParser`
+        :param args:
+        :type args: [str]
+        :param appname:
+        :type appname: str
+        :param cwd:
+        :type cwd: str
+        """
+        self._stack = stack
+        self._options = options
+        self._args = args
+        self._appname = appname
+        self._cwd = cwd
 
     def getArgs(self, *spec, **kwargs):
         """
@@ -345,7 +396,7 @@ class Settings(Parser):
         return args
 
     def getStack(self):
-        return
+        return self._stack
 
     def hasSection(self, name):
         """
@@ -356,19 +407,21 @@ class Settings(Parser):
         :returns: True or False.
         :rtype: [bool]
         """
-        return self._config.has_section(name)
+        return self._options.has_section(name)
 
-    def section(self, name):
+    def section(self, name=None):
         """
-        Get the section with the specified name.  Note if the section
-        does not exist, this method still doesn't fail.
+        Get the section with the specified name, or the section named appname
+        if name is None.  Note if the section does not exist, this method still
+        doesn't fail, it returns an empty Section.
 
         :param name: The section name.
         :type name: str
         :returns: The specified section.
         :rtype: :class:`Section`
         """
-        return Section(name, self)
+        name = self._appname if name is None else name
+        return Section(name, self._options, self._cwd)
 
     def sections(self):
         """
@@ -378,8 +431,8 @@ class Settings(Parser):
         :rtype: :[class:`Section`]
         """
         sections = []
-        for name in self._config.sections():
-            sections.append(Section(name, self))
+        for name in self._options.sections():
+            sections.append(Section(name, self._options, self._cwd))
         return sections
 
     def sectionsLike(self, startsWith):
@@ -392,8 +445,8 @@ class Settings(Parser):
         :rtype: [:class:`Section`]
         """
         sections = []
-        for name in [s for s in self._config.sections() if s.startswith(startsWith)]:
-            sections.append(Section(name, self))
+        for name in [s for s in self._options.sections() if s.startswith(startsWith)]:
+            sections.append(Section(name, self._options, self._cwd))
         return sections
 
 class Section(object):
@@ -402,13 +455,14 @@ class Section(object):
 
     :param name: The name of the section.
     :type name: str
-    :param settings: The parent :class:`Settings` instance.
-    :type settings: :class:`terane.settings.Settings`
+    :param options: The parent :class:`Settings` instance.
+    :type options: :class:`terane.settings.Settings`
     """
 
-    def __init__(self, name, settings):
+    def __init__(self, name, options, cwd):
         self.name = name
-        self._settings = settings
+        self._options = options
+        self._cwd = cwd
 
     def getString(self, name, default=None):
         """
@@ -424,9 +478,9 @@ class Section(object):
         :param default: The value to return if a value is not found.
         :returns: The string value, or the default value.
         """
-        if self.name == None or not self._settings._config.has_option(self.name, name):
+        if self.name == None or not self._options.has_option(self.name, name):
             return default
-        s = self._settings._config.get(self.name, name)
+        s = self._options.get(self.name, name)
         if s == None:
             return default
         return s.strip()
@@ -445,11 +499,11 @@ class Section(object):
         :param default: The value to return if a value is not found.
         :returns: The int value, or the default value.
         """
-        if self.name == None or not self._settings._config.has_option(self.name, name):
+        if self.name == None or not self._options.has_option(self.name, name):
             return default
-        if self._settings._config.get(self.name, name) == None:
+        if self._options.get(self.name, name) == None:
             return default
-        return self._settings._config.getint(self.name, name)
+        return self._options.getint(self.name, name)
 
     def getBoolean(self, name, default=None):
         """
@@ -465,11 +519,11 @@ class Section(object):
         :param default: The value to return if a value is not found.
         :returns: The bool value, or the default value.
         """
-        if self.name == None or not self._settings._config.has_option(self.name, name):
+        if self.name == None or not self._options.has_option(self.name, name):
             return default
-        if self._settings._config.get(self.name, name) == None:
+        if self._options.get(self.name, name) == None:
             return default
-        return self._settings._config.getboolean(self.name, name)
+        return self._options.getboolean(self.name, name)
 
     def getFloat(self, name, default=None):
         """
@@ -485,11 +539,11 @@ class Section(object):
         :param default: The value to return if a value is not found.
         :returns: The float value, or the default value.
         """
-        if self.name == None or not self._settings._config.has_option(self.name, name):
+        if self.name == None or not self._options.has_option(self.name, name):
             return default
-        if self._settings._config.get(self.name, name) == None:
+        if self._options.get(self.name, name) == None:
             return default
-        return self._settings._config.getfloat(self.name, name)
+        return self._options.getfloat(self.name, name)
 
     def getPath(self, name, default=None):
         """
@@ -506,14 +560,14 @@ class Section(object):
         :param default: The value to return if a value is not found.
         :returns: The string value, or the default value.
         """
-        if self.name == None or not self._settings._config.has_option(self.name, name):
+        if self.name == None or not self._options.has_option(self.name, name):
             return default
-        path = self._settings._config.get(self.name, name)
+        path = self._options.get(self.name, name)
         if path == None:
             return default
-        return os.path.normpath(os.path.join(self._settings._cwd, path))
+        return os.path.normpath(os.path.join(self._cwd, path))
 
-    def getList(self, etype, name, default=None, delimiter=','):
+    def getList(self, name, opttype, default=None, delimiter=','):
         """
         Returns the configuration value associated with the specified `name`,
         coerced into a list of values with the specified `type`.  If
@@ -523,22 +577,22 @@ class Section(object):
         easy to detect if a configuration value is not present by setting
         `default` to None.
 
-        :param etype: The type of each element in the list.
-        :type name: classtype
         :param name: The configuration setting name.
         :type name: str
+        :param opttype: The type of each option element in the list.
+        :type name: classtype
         :param default: The value to return if a value is not found.
         :param delimiter: The delimiter which separates values in the list.
         :type delimiter: str
         :returns: The string value, or the default value.
         """
-        if self.name == None or not self._settings._config.has_option(self.name, name):
+        if self.name == None or not self._options.has_option(self.name, name):
             return default
-        l = self._settings._config.get(self.name, name)
+        l = self._options.get(self.name, name)
         if l == None:
             return default
         try:
-            return [etype(e.strip()) for e in l.split(delimiter)]
+            return [opttype(e.strip()) for e in l.split(delimiter)]
         except Exception, e:
             raise ConfigureError("failed to parse configuration item [%s]=>%s: %s" % (
                 self.name, name, e))
@@ -550,14 +604,14 @@ class Section(object):
         if not isinstance(value, str):
             raise ConfigureError("failed to modify configuration item [%s]=>%s: value is not a string" % (
             self.name, name))
-        self._config.set(self.name, name, value)
+        self._options.set(self.name, name, value)
 
     def remove(self, name):
         """
         Remove the configuration setting.  Internally this sets the configuration
         value to None.
         """
-        self._config.set(self.name, name, None)
+        self._options.set(self.name, name, None)
 
 class NodespecSettings(object):
     """

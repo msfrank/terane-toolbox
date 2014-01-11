@@ -22,10 +22,10 @@ setup(
     install_requires=[
         "Twisted >= 13.1.0",
         "tornado >= 3.1.1",
-        "pyparsing",
+        "pyparsing >= 2.0.1",
+        "loggerglue >= 1.0",
+        "urwid >= 1.1.2",
         "python-dateutil",
-        "loggerglue",
-        "urwid",
         "zope.interface",
         "zope.component",
         ],
@@ -81,5 +81,5 @@ setup(
             ]
         },
     test_suite="tests",
-    tests_require=["setuptools_trial"]
+    tests_require=["nose >= 1.3.0"]
 )
