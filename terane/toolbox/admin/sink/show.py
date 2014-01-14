@@ -15,35 +15,21 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, traceback, urlparse
-from getpass import getpass
 from twisted.internet import reactor
+from terane.toolbox.admin.command import AdminCommand
 from terane.api.context import ApiContext
 from terane.api.sink import DescribeSinkRequest
-from terane.settings import Settings, ConfigureError
-from terane.loggers import getLogger, startLogging, StdoutHandler, DEBUG
+from terane.loggers import getLogger
 
 logger = getLogger('terane.toolbox.admin.sink.show')
 
-class Operation(object):
+class ShowSinkCommand(AdminCommand):
     """
     """
-
-    def configure(self, settings):
-        # load configuration
-        section = settings.section("show-sink")
-        self.host = urlparse.urlparse(section.getString("host", 'http://localhost:8080'))
-        self.username = section.getString("username", None)
-        self.password = section.getString("password", None)
-        if section.getBoolean("prompt password", False):
-            self.password = getpass("Password: ")
-        (self.name,) = settings.getArgs(str, names=["NAME"], maximum=1)
-        # configure logging
-        logconfigfile = section.getString('log config file', "%s.logconfig" % settings.appname)
-        if section.getBoolean("debug", False):
-            startLogging(StdoutHandler(), DEBUG, logconfigfile)
-        else:
-            startLogging(None)
+    def configure(self, ns):
+        (name,) = ns.getArgs(str, names=["NAME"], maximum=1)
+        self.name = name
+        AdminCommand.configure(self, ns)
 
     def printResult(self, sink):
         name = sink['name']
@@ -77,36 +63,3 @@ class Operation(object):
         deferred.addErrback(self.printError)
         reactor.run()
         return 0
-
-def show_sink_main():
-    settings = Settings(usage="[OPTIONS...] NAME", description="Describe the specified cluster sink")
-    try:
-        settings.addOption("H", "host",
-            override="host", help="Connect to terane server HOST", metavar="HOST"
-            )
-        settings.addOption("u", "username",
-            override="username", help="Authenticate with username USER", metavar="USER"
-            )
-        settings.addOption("p", "password",
-            override="password", help="Authenticate with password PASS", metavar="PASS"
-            )
-        settings.addSwitch("P", "prompt-password",
-            override="prompt password", help="Prompt for a password"
-            )
-        settings.addOption('', "log-config",
-            override="log config file", help="use logging configuration file FILE", metavar="FILE"
-            )
-        settings.addSwitch("d", "debug",
-            override="debug", help="Print debugging information"
-            )
-        # load configuration
-        settings.load()
-        # create the Searcher and run it
-        operation = Operation()
-        operation.configure(settings)
-        return operation.run()
-    except ConfigureError, e:
-        print >> sys.stderr, "%s: %s" % (settings.appname, e)
-    except Exception, e:
-        print >> sys.stderr, "\nUnhandled Exception:\n%s\n---\n%s" % (e,traceback.format_exc())
-    sys.exit(1)

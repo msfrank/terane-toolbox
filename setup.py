@@ -63,13 +63,11 @@ setup(
     entry_points={
         'console_scripts': [
             #'terane=terane.toolbox.console:console_main',
+            'terane-admin=terane.toolbox.admin:admin_main',
             'terane-etl=terane.toolbox.etl:etl_main',
             'terane-relay=terane.toolbox.relay:relay_main',
             'terane-run=terane.toolbox.run:run_main',
             'terane-search=terane.toolbox.search:search_main',
-            'terane-create-sink=terane.toolbox.admin.sink.create:create_sink_main',
-            'terane-list-sinks=terane.toolbox.admin.sink.list:list_sinks_main',
-            'terane-show-sink=terane.toolbox.admin.sink.show:show_sink_main',
             ],
         'terane.plugin.pipeline': [
             'stdin_source=terane.sources.file:StdinSource',

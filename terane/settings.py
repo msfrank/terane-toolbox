@@ -32,7 +32,7 @@ class Option(object):
     """
     A command line option.
     """
-    def __init__(self, shortname, longname, section, override, help=None, metavar=None):
+    def __init__(self, shortname, longname, override, section=None, help=None, metavar=None):
         self.shortname = shortname
         self.shortident = "%s:" % shortname
         self.longname = longname
@@ -42,15 +42,43 @@ class Option(object):
         self.help = help
         self.metavar = metavar
 
+class ShortOption(Option):
+    """
+    A command line option with only a short name.
+    """
+    def __init__(self, shortname, override, section=None, help=None, metavar=None):
+        Option.__init__(self, shortname, '', override, section, help, metavar)
+
+class LongOption(Option):
+    """
+    A command line option with only a long name.
+    """
+    def __init__(self, longname, override, section=None, help=None, metavar=None):
+        Option.__init__(self, '', longname, override, section, help, metavar)
+
 class Switch(Option):
     """
     A command line switch.
     """
-    def __init__(self, shortname, longname, section, override, reverse=False, help=None):
-        Option.__init__(self, shortname, longname, section, override, help)
+    def __init__(self, shortname, longname, override, section=None, reverse=False, help=None):
+        Option.__init__(self, shortname, longname, override, section, help)
         self.shortident = shortname
         self.longident = longname
         self.reverse = reverse
+
+class ShortSwitch(Switch):
+    """
+    A command line switch with only a short name.
+    """
+    def __init__(self, shortname, override, section=None, reverse=False, help=None):
+        Switch.__init__(self, shortname, '', override, section, reverse, help)
+
+class LongSwitch(Switch):
+    """
+    A command line switch with only a long name.
+    """
+    def __init__(self, longname, override, section=None, reverse=False, help=None):
+        Switch.__init__(self, '', longname, override, section, reverse, help)
 
 class Parser(object):
     """
@@ -104,6 +132,25 @@ class Parser(object):
             parser = parser._parent
         return ':'.join(sections)
 
+    def add(self, o):
+        """
+        Add a command-line option or switch.
+
+        :param o: o
+        :type o: :class:`Option`
+        """
+        if not isinstance(o, Option):
+            raise ConfigureError("")
+        if o.shortname in self._options:
+            raise ConfigureError("-%s is already defined" % o.shortname)
+        if o.longname in self._options:
+            raise ConfigureError("--%s is already defined" % o.longname)
+        if o.section is None:
+            o.section = self._lookupSection()
+        self._options["-%s" % o.shortname] = o
+        self._options["--%s" % o.longname] = o
+        self._optslist.append(o)
+
     def addOption(self, shortname, longname, override, section=None, help=None, metavar=None):
         """
         Add a command-line option to be parsed.  An option (as opposed to a switch)
@@ -122,21 +169,13 @@ class Parser(object):
         :param metavar: The variable displayed in the help string
         :type metavar: str
         """
-        if shortname in self._options:
-            raise ConfigureError("-%s is already defined" % shortname)
-        if longname in self._options:
-            raise ConfigureError("--%s is already defined" % longname)
-        section = self._lookupSection() if section is None else section
-        o = Option(shortname, longname, section, override, help, metavar)
-        self._options["-%s" % shortname] = o
-        self._options["--%s" % longname] = o
-        self._optslist.append(o)
+        self.add(Option(shortname, longname, section, override, help, metavar))
 
     def addShortOption(self, shortname, override, section=None, help=None, metavar=None):
-        return self.addOption(shortname, '', override, section, help, metavar)
+        self.add(ShortOption(shortname, section, override, help, metavar))
 
     def addLongOption(self, longname, override, section=None, help=None, metavar=None):
-        return self.addOption('', longname, override, section, help, metavar)
+        self.add(LongOption(longname, section, override, help, metavar))
 
     def addSwitch(self, shortname, longname, override, section=None, reverse=False, help=None):
         """
@@ -156,21 +195,13 @@ class Parser(object):
         :param help: The help string, displayed in --help output.
         :type help: str
         """
-        if shortname in self._options:
-            raise ConfigureError("-%s is already defined" % shortname)
-        if longname in self._options:
-            raise ConfigureError("--%s is already defined" % longname)
-        section = self._lookupSection() if section is None else section
-        s = Switch(shortname, longname, section, override, reverse, help)
-        self._options["-%s" % shortname] = s
-        self._options["--%s" % longname] = s
-        self._optslist.append(s)
+        self.add(Switch(shortname, longname, section, override, reverse, help))
 
     def addShortSwitch(self, shortname, override, section=None, reverse=False, help=None):
-        return self.addSwitch(shortname, '', override, section, reverse, help)
+        self.add(ShortSwitch(shortname, section, override, reverse, help))
 
     def addLongSwitch(self, longname, override, section=None, reverse=False, help=None):
-        return self.addSwitch('', longname, override, section, reverse, help)
+        self.add(LongSwitch(longname, section, override, reverse, help))
 
     def _parse(self, argv, store):
         """
@@ -205,9 +236,9 @@ class Parser(object):
             if not subcommand in self._subcommands:
                 raise ConfigureError("no subcommand named '%s'" % subcommand)
             stack,args = self._subcommands[subcommand]._parse(args, store)
-            stack.append(subcommand)
+            stack.insert(0, subcommand)
             return stack,args
-        return [self.name], args
+        return [], args
 
     def _usage(self):
         """
@@ -347,6 +378,14 @@ class Namespace(object):
         self._appname = appname
         self._cwd = cwd
 
+    @property
+    def appname(self):
+        return self._appname
+
+    @property
+    def cwd(self):
+        return self._cwd
+
     def getArgs(self, *spec, **kwargs):
         """
         Returns a list containing arguments conforming to *spec.  if the number of
@@ -395,8 +434,10 @@ class Namespace(object):
                 raise ConfigureError("failed to parse argument: %s" % str(e))
         return args
 
-    def getStack(self):
-        return self._stack
+    def popStack(self):
+        if len(self._stack) > 0:
+            return self._stack.pop(0)
+        return None
 
     def hasSection(self, name):
         """

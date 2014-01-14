@@ -15,44 +15,25 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, traceback, urlparse
-from getpass import getpass
 from twisted.internet import reactor
+from terane.toolbox.admin.command import AdminCommand
 from terane.api.context import ApiContext
 from terane.api.sink import CreateSinkRequest
-from terane.settings import Settings, ConfigureError
-from terane.loggers import getLogger, startLogging, StdoutHandler, DEBUG
+from terane.loggers import getLogger
 
 logger = getLogger('terane.toolbox.admin.sink.create')
 
-class Operation(object):
+class CreateCassandraSinkCommand(AdminCommand):
     """
     """
-
-    def configure(self, settings):
-        # load configuration
-        section = settings.section("create-sink")
-        self.host = urlparse.urlparse(section.getString("host", 'http://localhost:8080'))
-        self.username = section.getString("username", None)
-        self.password = section.getString("password", None)
-        if section.getBoolean("prompt password", False):
-            self.password = getpass("Password: ")
-        sinktype = settings.getStack()[0]
-        if sinktype == 'cassandra':
-            section = settings.section("create-sink:cassandra")
-            (name,) = settings.getArgs(str, names=["NAME"], maximum=1)
-            self.sink = dict()
-            self.sink['name'] = name
-            self.sink['sinkType'] = 'cassandra'
-            self.sink['flushInterval'] = section.getInt("flush interval", 60000)
-        else:
-            raise ConfigureError("invalid sink type '%s'" % sinktype)
-        # configure logging
-        logconfigfile = section.getString('log config file', "%s.logconfig" % settings.appname)
-        if section.getBoolean("debug", False):
-            startLogging(StdoutHandler(), DEBUG, logconfigfile)
-        else:
-            startLogging(None)
+    def configure(self, ns):
+        section = ns.section("admin:sink:create:cassandra")
+        (name,) = ns.getArgs(str, names=["NAME"], maximum=1)
+        self.sink = dict()
+        self.sink['sinkType'] = 'cassandra'
+        self.sink['name'] = name
+        self.sink['flushInterval'] = section.getInt("flush interval", 60000)
+        AdminCommand.configure(self, ns)
 
     def printResult(self, result):
         reactor.stop()
@@ -78,47 +59,3 @@ class Operation(object):
         deferred.addErrback(self.printError)
         reactor.run()
         return 0
-
-def create_sink_main():
-    settings = Settings(
-        usage="[OPTIONS...] SINKTYPE [SINKOPTIONS...] NAME",
-        description="Create a cluster sink",
-        subusage="Available sink types:"
-    )
-    try:
-        # global options
-        settings.addOption("H", "host",
-            override="host", help="Connect to terane server HOST", metavar="HOST"
-            )
-        settings.addOption("u", "username",
-            override="username", help="Authenticate with username USER", metavar="USER"
-            )
-        settings.addOption("p", "password",
-            override="password", help="Authenticate with password PASS", metavar="PASS"
-            )
-        settings.addSwitch("P", "prompt-password",
-            override="prompt password", help="Prompt for a password"
-            )
-        settings.addOption('', "log-config",
-            override="log config file", help="use logging configuration file FILE", metavar="FILE"
-            )
-        settings.addSwitch("d", "debug",
-            override="debug", help="Print debugging information"
-            )
-        # cassandra specific options
-        cassandra = settings.addSubcommand("cassandra", usage="[SINKOPTIONS...] NAME", description="Create a new Cassandra sink")
-        cassandra.addOption('f', "flush-interval",
-            override="flush interval", help="Use flush interval MILLIS", metavar="MILLIS"
-            )
-
-        # load configuration
-        settings.load()
-        # create the Searcher and run it
-        operation = Operation()
-        operation.configure(settings)
-        return operation.run()
-    except ConfigureError, e:
-        print >> sys.stderr, "%s: %s" % (settings.appname, e)
-    except Exception, e:
-        print >> sys.stderr, "\nUnhandled Exception:\n%s\n---\n%s" % (e,traceback.format_exc())
-    sys.exit(1)

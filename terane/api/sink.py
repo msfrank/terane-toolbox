@@ -34,7 +34,10 @@ class CreateSinkRequest(object):
     Create a new sink with the specified name.
     """
 
-    headers = Headers({"User-Agent" : ["terane-toolbox/" + versionstring()]})
+    headers = Headers({
+        "Content-Type" : ["application/json"],
+        "User-Agent" : ["terane-toolbox/" + versionstring()],
+        })
 
     def __init__(self, settings):
         self.settings = settings
