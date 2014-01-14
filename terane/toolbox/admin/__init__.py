@@ -17,6 +17,10 @@
 
 import sys, traceback
 from terane.toolbox.admin.action import ActionMap,Action
+from terane.toolbox.admin.source.create import CreateSyslogUdpSourceCommand, CreateSyslogTcpSourceCommand
+from terane.toolbox.admin.source.delete import DeleteSourceCommand
+from terane.toolbox.admin.source.list import ListSourcesCommand
+from terane.toolbox.admin.source.show import ShowSourceCommand
 from terane.toolbox.admin.sink.create import CreateCassandraSinkCommand
 from terane.toolbox.admin.sink.delete import DeleteSinkCommand
 from terane.toolbox.admin.sink.list import ListSinksCommand
@@ -33,12 +37,40 @@ actions = ActionMap(usage="[OPTIONS...] COMMAND", description="Terane cluster ad
     Switch("P", "prompt-password", override="prompt password", help="Prompt for a password"),
     LongOption("log-config", override="log config file", help="use logging configuration file FILE", metavar="FILE"),
     Switch("d", "debug", override="debug", help="Print debugging information")], actions=[
+    Action("source", usage="COMMAND", description="Manipulate sources in a Terane cluster", actions=[
+        Action("create", usage="TYPE", description="Create a source of the specified TYPE", actions=[
+            Action("syslog-udp", callback=CreateSyslogUdpSourceCommand(),
+                usage="[OPTIONS...] NAME",
+                description="Create a syslog-udp source with the specified NAME", options=[
+                Option('i', "interface", override="interface", help="Listen on the specified ADDRESS", metavar="ADDRESS"),
+                Option('p', "port", override="port", help="Listen on the specified PORT", metavar="PORT")]),
+            Action("syslog-tcp", callback=CreateSyslogTcpSourceCommand(),
+                usage="[OPTIONS...] NAME",
+                description="Create a syslog-tcp source with the specified NAME", options=[
+                Option('i', "interface", override="interface", help="TCP bind address", metavar="ADDRESS"),
+                Option('p', "port", override="port", help="TCP bind port", metavar="PORT"),
+                Option('t', "idle-timeout", override="idle timeout", help="TCP idle timeout in milliseconds", metavar="MILLIS"),
+                Option('c', "max-connections", override="max connections", help="Maximum concurrent connections", metavar="NUM"),
+                Option('m', "max-message-size", override="max message size", help="Maximum message size", metavar="NUM"),
+                ])
+            ]),
+        Action("delete", callback=DeleteSourceCommand(),
+            usage="[OPTIONS...] NAME",
+            description="Delete the source with the specified NAME"),
+        Action("list", callback=ListSourcesCommand(),
+            usage="[OPTIONS...]",
+            description="List all sources in the cluster"),
+        Action("show", callback=ShowSourceCommand(),
+            usage="[OPTIONS...] NAME",
+            description="Describe the source with the specified NAME")
+    ]),
     Action("sink", usage="COMMAND", description="Manipulate sinks in a Terane cluster", actions=[
         Action("create", usage="TYPE", description="Create a sink of the specified TYPE", actions=[
             Action("cassandra", callback=CreateCassandraSinkCommand(),
                 usage="[OPTIONS...] NAME",
                 description="Create a Cassandra sink with the specified NAME", options=[
-                Option('f', "flush-interval", override="flush interval", help="Use flush interval MILLIS", metavar="MILLIS")]),
+                Option('f', "flush-interval", override="flush interval", help="Use flush interval MILLIS", metavar="MILLIS")
+                ])
             ]),
         Action("delete", callback=DeleteSinkCommand(),
             usage="[OPTIONS...] NAME",

@@ -1,3 +1,4 @@
+setuptools-*
 *.pyc
 build
 dist
@@ -5,3 +6,4 @@ terane_toolbox.egg-info
 .idea
 out
 *.iml
+*.log

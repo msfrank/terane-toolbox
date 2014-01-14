@@ -55,6 +55,7 @@ setup(
         'terane.toolbox',
         'terane.toolbox.admin',
         'terane.toolbox.admin.sink',
+        'terane.toolbox.admin.source',
         'terane.toolbox.etl',
         'terane.toolbox.relay',
         'terane.toolbox.run',

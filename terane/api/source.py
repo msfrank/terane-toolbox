@@ -27,11 +27,11 @@ from terane.api.client import JsonProducer
 from terane.loggers import getLogger
 from terane import versionstring
 
-logger = getLogger('terane.api.sink')
+logger = getLogger('terane.api.source')
 
-class CreateSinkRequest(object):
+class CreateSourceRequest(object):
     """
-    Create a new sink with the specified name.
+    Create a new source with the specified name.
     """
 
     headers = Headers({
@@ -47,7 +47,7 @@ class CreateSinkRequest(object):
         """
         agent = Agent(context.reactor, context.factory, context.connecttimeout, context.bindaddress, context.connectionpool)
         headers = self.headers.copy()
-        url = urlparse.urljoin(context.url.geturl(), '/1/sinks')
+        url = urlparse.urljoin(context.url.geturl(), '/1/sources')
         request = agent.request("POST", url, headers=headers, bodyProducer=JsonProducer(self.settings))
         deferred = Deferred()
         request.addCallback(self.getResponse, agent, context, deferred)
@@ -65,16 +65,16 @@ class CreateSinkRequest(object):
     def processResult(self, entity, agent, context, deferred):
         result = json.loads(entity)
         logger.debug("processing json result: %s" % pformat(result))
-        # FIXME: return Sink
+        # FIXME: return Source
         deferred.callback(None)
 
     def handleError(self, failure, agent, context, deferred):
         deferred.errback(failure)
 
 
-class DeleteSinkRequest(object):
+class DeleteSourceRequest(object):
     """
-    Delete the sink with the specified name.
+    Delete the source with the specified name.
     """
 
     headers = Headers({"User-Agent" : ["terane-toolbox/" + versionstring()]})
@@ -83,9 +83,9 @@ class DeleteSinkRequest(object):
         self.name = name
 
 
-class DescribeSinkRequest(object):
+class DescribeSourceRequest(object):
     """
-    Describe the sink with the specified name.
+    Describe the source with the specified name.
     """
 
     headers = Headers({"User-Agent" : ["terane-toolbox/" + versionstring()]})
@@ -100,7 +100,7 @@ class DescribeSinkRequest(object):
         """
         agent = Agent(context.reactor, context.factory, context.connecttimeout, context.bindaddress, context.connectionpool)
         headers = self.headers.copy()
-        url = urlparse.urljoin(context.url.geturl(), '/1/sinks/' + self.name)
+        url = urlparse.urljoin(context.url.geturl(), '/1/sources/' + self.name)
         request = agent.request("GET", url, headers=headers)
         deferred = Deferred()
         request.addCallback(self.getResponse, agent, context, deferred)
@@ -119,17 +119,17 @@ class DescribeSinkRequest(object):
         result = json.loads(entity)
         logger.debug("processing json result: %s" % pformat(result))
         # process statistics
-        sink = result['settings']
+        source = result['settings']
         # pass the result to the deferred
-        deferred.callback(sink)
+        deferred.callback(source)
 
     def handleError(self, failure, agent, context, deferred):
         deferred.errback(failure)
 
 
-class EnumerateSinksRequest(object):
+class EnumerateSourcesRequest(object):
     """
-    Describe all sinks.
+    Describe all sources.
     """
 
     headers = Headers({"User-Agent" : ["terane-toolbox/" + versionstring()]})
@@ -139,7 +139,7 @@ class EnumerateSinksRequest(object):
         """
         agent = Agent(context.reactor, context.factory, context.connecttimeout, context.bindaddress, context.connectionpool)
         headers = self.headers.copy()
-        url = urlparse.urljoin(context.url.geturl(), '/1/sinks')
+        url = urlparse.urljoin(context.url.geturl(), '/1/sources')
         request = agent.request("GET", url, headers=headers)
         deferred = Deferred()
         request.addCallback(self.getResponse, agent, context, deferred)
@@ -158,12 +158,12 @@ class EnumerateSinksRequest(object):
         results = json.loads(entity)
         logger.debug("processing json result: %s" % pformat(results))
         # process statistics
-        sinks = list()
+        sources = list()
         for result in results:
             settings = result['settings']
-            sinks.append(settings)
+            sources.append(settings)
         # pass the result to the deferred
-        deferred.callback(sinks)
+        deferred.callback(sources)
 
     def handleError(self, failure, agent, context, deferred):
         deferred.errback(failure)
