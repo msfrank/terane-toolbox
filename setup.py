@@ -54,6 +54,7 @@ setup(
         'terane.sources',
         'terane.toolbox',
         'terane.toolbox.admin',
+        'terane.toolbox.admin.route',
         'terane.toolbox.admin.sink',
         'terane.toolbox.admin.source',
         'terane.toolbox.etl',

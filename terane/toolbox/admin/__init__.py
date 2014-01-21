@@ -17,6 +17,7 @@
 
 import sys, traceback
 from terane.toolbox.admin.action import ActionMap,Action
+from terane.toolbox.admin.route.append import AppendRouteCommand
 from terane.toolbox.admin.source.create import CreateSyslogUdpSourceCommand, CreateSyslogTcpSourceCommand
 from terane.toolbox.admin.source.delete import DeleteSourceCommand
 from terane.toolbox.admin.source.list import ListSourcesCommand
@@ -37,6 +38,26 @@ actions = ActionMap(usage="[OPTIONS...] COMMAND", description="Terane cluster ad
     Switch("P", "prompt-password", override="prompt password", help="Prompt for a password"),
     LongOption("log-config", override="log config file", help="use logging configuration file FILE", metavar="FILE"),
     Switch("d", "debug", override="debug", help="Print debugging information")], actions=[
+    Action("route", usage="COMMAND", description="Manipulate routes in a Terane cluster", actions=[
+        Action("append", callback=None,
+               usage="ROUTE",
+               description="Append ROUTE to the routing table"),
+        Action("insert", callback=None,
+               usage="POSITION ROUTE",
+               description="Insert ROUTE at the specified POSITION in the routing table"),
+        Action("replace", callback=None,
+               usage="POSITION ROUTE",
+               description="Replace the route at the specified POSITION with ROUTE"),
+        Action("delete", callback=None,
+               usage="POSITION",
+               description="Delete the route at the specified POSITION"),
+        Action("flush", callback=None,
+               usage="",
+               description="Delete all routes in the table"),
+        Action("list", callback=None,
+               usage="",
+               description="Describe the current routing table"),
+        ]),
     Action("source", usage="COMMAND", description="Manipulate sources in a Terane cluster", actions=[
         Action("create", usage="TYPE", description="Create a source of the specified TYPE", actions=[
             Action("syslog-udp", callback=CreateSyslogUdpSourceCommand(),
@@ -55,15 +76,15 @@ actions = ActionMap(usage="[OPTIONS...] COMMAND", description="Terane cluster ad
                 ])
             ]),
         Action("delete", callback=DeleteSourceCommand(),
-            usage="[OPTIONS...] NAME",
+            usage="NAME",
             description="Delete the source with the specified NAME"),
         Action("list", callback=ListSourcesCommand(),
-            usage="[OPTIONS...]",
+            usage="",
             description="List all sources in the cluster"),
         Action("show", callback=ShowSourceCommand(),
-            usage="[OPTIONS...] NAME",
+            usage="NAME",
             description="Describe the source with the specified NAME")
-    ]),
+        ]),
     Action("sink", usage="COMMAND", description="Manipulate sinks in a Terane cluster", actions=[
         Action("create", usage="TYPE", description="Create a sink of the specified TYPE", actions=[
             Action("cassandra", callback=CreateCassandraSinkCommand(),
@@ -73,13 +94,13 @@ actions = ActionMap(usage="[OPTIONS...] COMMAND", description="Terane cluster ad
                 ])
             ]),
         Action("delete", callback=DeleteSinkCommand(),
-            usage="[OPTIONS...] NAME",
+            usage="NAME",
             description="Delete the sink with the specified NAME"),
         Action("list", callback=ListSinksCommand(),
-            usage="[OPTIONS...]",
+            usage="",
             description="List all sinks in the cluster"),
         Action("show", callback=ShowSinkCommand(),
-            usage="[OPTIONS...] NAME",
+            usage="NAME",
             description="Describe the sink with the specified NAME")
         ])
     ])

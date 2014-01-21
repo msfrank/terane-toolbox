@@ -35,10 +35,10 @@ def relay_main():
             override="debug", help="Print debugging information"
             )
         # load configuration
-        settings.load()
+        ns = settings.parse()
         # create the Server and run it
         server = Server()
-        server.configure(settings)
+        server.configure(ns)
         return server.run()
     except ConfigureError, e:
         print >> sys.stderr, "%s: %s" % (settings.appname, e)

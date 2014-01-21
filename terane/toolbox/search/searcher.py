@@ -28,10 +28,9 @@ logger = getLogger('terane.toolbox.search.searcher')
 class Searcher(object):
     """
     """
-
-    def configure(self, settings):
+    def configure(self, ns):
         # load configuration
-        section = settings.section("search")
+        section = ns.section("search")
         self.host = urlparse.urlparse(section.getString("host", 'http://localhost:8080'))
         self.username = section.getString("username", None)
         self.password = section.getString("password", None)
@@ -39,11 +38,11 @@ class Searcher(object):
             self.password = getpass("Password: ")
         self.store = section.getString("store", "main")
         # get the list of fields to retrieve
-        self.fields = section.getList(str, "retrieve fields", None)
+        self.fields = section.getList("retrieve fields", str, None)
         if self.fields != None:
             pass
         # get the list of fields to sort by
-        self.sortby = section.getList(str, "sort fields", None)
+        self.sortby = section.getList("sort fields", str, None)
         if self.sortby != None:
             pass
         self.reverse = section.getBoolean("sort reverse", False)
@@ -53,9 +52,9 @@ class Searcher(object):
         if self.tz != None:
             self.tz = dateutil.tz.gettz(self.tz)
         # concatenate the command args into the query string
-        self.query = ' '.join(settings.args)
+        self.query = ' '.join(ns.args)
         # configure server logging
-        logconfigfile = section.getString('log config file', "%s.logconfig" % settings.appname)
+        logconfigfile = section.getString('log config file', "%s.logconfig" % ns.appname)
         if section.getBoolean("debug", False):
             startLogging(StdoutHandler(), DEBUG, logconfigfile)
         else:

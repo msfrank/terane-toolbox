@@ -15,13 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, signal
+import os, sys, signal, traceback
 from tornado.tcpserver import TCPServer
 from tornado.iostream import StreamClosedError
 from tornado.ioloop import IOLoop
 from tornado.process import task_id
 from loggerglue.rfc5424 import SyslogEntry, syslog_msg
-from terane.settings import ConfigureError
 from terane.loggers import getLogger, startLogging, StdoutHandler, DEBUG
 
 logger = getLogger('terane.toolbox.relay.server')
@@ -31,13 +30,13 @@ class Server(object):
     Receives TCP syslog messages and processes them using the
     specified pipeline.
     """
-    def configure(self, settings):
+    def configure(self, ns):
         # load configuration
-        section = settings.section("syslog")
+        section = ns.section("syslog")
         self.nprocs = section.getInt("num processes", None)
         self.port = section.getInt("listen port", 10514)
         # configure server logging
-        logconfigfile = section.getString('log config file', "%s.logconfig" % settings.appname)
+        logconfigfile = section.getString('log config file', "%s.logconfig" % ns.appname)
         getLogger('tornado')
         if section.getBoolean("debug", False):
             startLogging(StdoutHandler(), DEBUG, logconfigfile)
@@ -58,7 +57,7 @@ class Server(object):
         logger.debug("stopping main loop")
 
     def handle_exception(self):
-        logger.error("callback exception:\n%s\n---\n%s" % (e,traceback.format_exc()))
+        logger.error("callback exception:\n%s\n---\n%s" % (sys.exc_info, traceback.format_exc()))
 
     def signal_shutdown(self, signum, frame):
         logger.debug("caught signal %d" % signum)

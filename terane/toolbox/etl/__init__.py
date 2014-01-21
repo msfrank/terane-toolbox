@@ -41,10 +41,10 @@ def etl_main():
             override="debug", help="Print debugging information"
             )
         # load configuration
-        settings.load()
+        ns = settings.parse()
         # create the ETL and run it
         etl = ETL()
-        etl.configure(settings)
+        etl.configure(ns)
         return etl.run()
     except ConfigureError, e:
         print >> sys.stderr, "%s: %s" % (settings.appname, e)

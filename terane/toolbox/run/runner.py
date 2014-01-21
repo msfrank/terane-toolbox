@@ -27,13 +27,12 @@ class Runner(object):
     """
     Execute a pipeline.
     """
-
-    def configure(self, settings):
+    def configure(self, ns):
         # load configuration
-        section = settings.section("run")
+        section = ns.section("run")
         # configure pipeline
         plugins = PluginManager()
-        args = settings.args
+        args = ns.args
         if len(args) > 0:
             spec = " ".join(args)
         else:
@@ -48,7 +47,7 @@ class Runner(object):
         filters = nodes
         self.pipeline = Pipeline(source, sink, filters)
         # configure server logging
-        logconfigfile = section.getString('log config file', "%s.logconfig" % settings.appname)
+        logconfigfile = section.getString('log config file', "%s.logconfig" % ns.appname)
         if section.getBoolean("debug", False):
             startLogging(StdoutHandler(), DEBUG, logconfigfile)
         else:

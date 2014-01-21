@@ -28,6 +28,8 @@ class Command(object):
         return 0
 
 class AdminCommand(Command):
+    """
+    """
     def configure(self, ns):
         section = ns.section("admin")
         self.host = urlparse.urlparse(section.getString("host", 'http://localhost:8080'))
@@ -40,3 +42,17 @@ class AdminCommand(Command):
             startLogging(StdoutHandler(), DEBUG, logconfigfile)
         else:
             startLogging(None)
+
+    def printError(self, failure):
+        try:
+            import StringIO
+            s = StringIO.StringIO()
+            failure.printTraceback(s)
+            logger.debug("caught exception: %s" % s.getvalue())
+            raise failure.value
+        except ValueError, e:
+            print "Operation failed: remote server returned HTTP status %s: %s" % e.args
+        except BaseException, e:
+            print "Operation failed: %s" % str(e)
+        reactor.stop()
+

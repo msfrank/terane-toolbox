@@ -32,10 +32,10 @@ def run_main():
             override="debug", help="Print debugging information"
             )
         # load configuration
-        settings.load()
+        ns = settings.parse()
         # create the Runner and run it
         runner = Runner()
-        runner.configure(settings)
+        runner.configure(ns)
         return runner.run()
     except ConfigureError, e:
         print >> sys.stderr, "%s: %s" % (settings.appname, e)

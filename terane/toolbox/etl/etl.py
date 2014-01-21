@@ -28,10 +28,9 @@ class ETL(object):
     """
     ETL contains all of the logic necessary to perform an extract-transform-load.
     """
-
-    def configure(self, settings):
+    def configure(self, ns):
         # load configuration
-        section = settings.section("etl")
+        section = ns.section("etl")
         # publish to the specified sink
         self.store = section.getString("sink", "main")
         # configure pipeline
@@ -43,7 +42,7 @@ class ETL(object):
         nodes = parsenodespec(section.getString("filters", None))
         self.pipeline = Pipeline(source, sink, makepipeline(nodes))
         # configure server logging
-        logconfigfile = section.getString('log config file', "%s.logconfig" % settings.appname)
+        logconfigfile = section.getString('log config file', "%s.logconfig" % ns.appname)
         if section.getBoolean("debug", False):
             startLogging(StdoutHandler(), DEBUG, logconfigfile)
         else:

@@ -140,11 +140,11 @@ class Parser(object):
         :type o: :class:`Option`
         """
         if not isinstance(o, Option):
-            raise ConfigureError("")
+            raise TypeError("%s is not an instance of type Option" % o)
         if o.shortname in self._options:
-            raise ConfigureError("-%s is already defined" % o.shortname)
+            raise RuntimeError("-%s is already defined" % o.shortname)
         if o.longname in self._options:
-            raise ConfigureError("--%s is already defined" % o.longname)
+            raise RuntimeError("--%s is already defined" % o.longname)
         if o.section is None:
             o.section = self._lookupSection()
         self._options["-%s" % o.shortname] = o
@@ -169,13 +169,13 @@ class Parser(object):
         :param metavar: The variable displayed in the help string
         :type metavar: str
         """
-        self.add(Option(shortname, longname, section, override, help, metavar))
+        self.add(Option(shortname, longname, override, section, help, metavar))
 
     def addShortOption(self, shortname, override, section=None, help=None, metavar=None):
-        self.add(ShortOption(shortname, section, override, help, metavar))
+        self.add(ShortOption(shortname, override, section, help, metavar))
 
     def addLongOption(self, longname, override, section=None, help=None, metavar=None):
-        self.add(LongOption(longname, section, override, help, metavar))
+        self.add(LongOption(longname, override, section, help, metavar))
 
     def addSwitch(self, shortname, longname, override, section=None, reverse=False, help=None):
         """
@@ -195,13 +195,13 @@ class Parser(object):
         :param help: The help string, displayed in --help output.
         :type help: str
         """
-        self.add(Switch(shortname, longname, section, override, reverse, help))
+        self.add(Switch(shortname, longname, override, section, reverse, help))
 
     def addShortSwitch(self, shortname, override, section=None, reverse=False, help=None):
-        self.add(ShortSwitch(shortname, section, override, reverse, help))
+        self.add(ShortSwitch(shortname, override, section, reverse, help))
 
     def addLongSwitch(self, longname, override, section=None, reverse=False, help=None):
-        self.add(LongSwitch(longname, section, override, reverse, help))
+        self.add(LongSwitch(longname, override, section, reverse, help))
 
     def _parse(self, argv, store):
         """
@@ -328,9 +328,12 @@ class Settings(Parser):
         :returns: A :class:`Namespace` object with the parsed settings
         :rtype: :class:`Namespace`
         """
+        stack = list()
+        options = RawConfigParser()
+        args = list()
+        overrides = RawConfigParser()
         try:
             argv = argv if argv is not None else sys.argv
-            overrides = RawConfigParser()
             overrides.add_section(self._section)
             overrides.set(self._section, 'config file', os.path.join(self._confbase, "%s.conf" % self.appname))
             # parse command line arguments
@@ -338,7 +341,6 @@ class Settings(Parser):
             # load configuration file
             config_file = overrides.get(self._section, 'config file')
             path = os.path.normpath(os.path.join(self._cwd, config_file))
-            options = RawConfigParser()
             with open(path, 'r') as f:
                 options.readfp(f, path)
             logger.debug("loaded settings from %s" % path)
@@ -354,17 +356,17 @@ class Settings(Parser):
                 if not options.has_section(section):
                     options.add_section(section)
                 options.set(section, name, str(value))
-        return Namespace(stack, options, args, self.appname, self._cwd)
+        return Namespace(stack, options, args, self.appname, self._cwd, self._section)
 
 class Namespace(object):
     """
     """
-    def __init__(self, stack, options, args, appname, cwd):
+    def __init__(self, stack, options, args, appname, cwd, section):
         """
         :param stack:
         :type stack: [str]
         :param options:
-        :type options: :class:`ConfigParser`
+        :type options: :class:`ConfigParser.RawConfigParser`
         :param args:
         :type args: [str]
         :param appname:
@@ -377,6 +379,7 @@ class Namespace(object):
         self._args = args
         self._appname = appname
         self._cwd = cwd
+        self._section = section
 
     @property
     def appname(self):
@@ -385,6 +388,10 @@ class Namespace(object):
     @property
     def cwd(self):
         return self._cwd
+
+    @property
+    def args(self):
+        return list(self._args)
 
     def getArgs(self, *spec, **kwargs):
         """
@@ -461,7 +468,7 @@ class Namespace(object):
         :returns: The specified section.
         :rtype: :class:`Section`
         """
-        name = self._appname if name is None else name
+        name = self._section if name is None else name
         return Section(name, self._options, self._cwd)
 
     def sections(self):
@@ -497,7 +504,7 @@ class Section(object):
     :param name: The name of the section.
     :type name: str
     :param options: The parent :class:`Settings` instance.
-    :type options: :class:`terane.settings.Settings`
+    :type options: :class:`ConfigParser.RawConfigParser`
     """
 
     def __init__(self, name, options, cwd):

@@ -62,10 +62,10 @@ def search_main():
             override="debug", help="Print debugging information"
             )
         # load configuration
-        settings.load()
+        ns = settings.parse()
         # create the Searcher and run it
         searcher = Searcher()
-        searcher.configure(settings)
+        searcher.configure(ns)
         return searcher.run()
     except ConfigureError, e:
         print >> sys.stderr, "%s: %s" % (settings.appname, e)
