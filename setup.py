@@ -73,6 +73,7 @@ setup(
             ],
         'terane.plugin.pipeline': [
             'stdin_source=terane.sources.file:StdinSource',
+            'tail_source=terane.sources.tail:TailSource',
             'syslog_sink=terane.sinks.syslog:SyslogSink',
             'syslog_format=terane.filters.syslog_format:SyslogFormatFilter',
             'enrich=terane.filters.enrich:EnrichFilter',

@@ -27,7 +27,6 @@ class AbstractFileSource(object):
     Abstract base class for file sources, implementing common logic.
     """
     def __init__(self, *args, **kwargs):
-        self.f = None
         self.hostname = socket.getfqdn()
         self.linemax = 16384
 
@@ -37,34 +36,30 @@ class AbstractFileSource(object):
         # ignore lines longer than max line length
         self.linemax = section.getInt("max line length", self.linemax)
 
-    def _readline(self):
-        if self.linemax == None:
-            return self.f.readline()
-        return self.f.readline(self.linemax)
+    def readline(self):
+        """
+        Subclasses must implement this method.
+
+        :returns: The next line
+        :rtype: str
+        """
+        raise NotImplementedError()
 
     def _skipnext(self):
         while True:
-            line = self._readline()
+            line = self.readline()
             if line == '':
                 raise StopIteration
             if line[-1] == '\n':
-                line = self._readline()
+                line = self.readline()
                 if line == '':
                     raise StopIteration
                 stripped = line.strip()
                 if line[-1] == '\n' and len(stripped) > 0:
                     return line
 
-    def emit(self):
-        """
-        Process the next line from the file source, or raise
-        StopIteration.
-
-        :returns: The next :class:`Event`
-        :rtype: :class:`Event`
-        :raises: StopIteration
-        """
-        line = self._readline()
+    def _emit(self):
+        line = self.readline()
         # no more data is available
         if line == '':
             raise StopIteration
@@ -85,6 +80,20 @@ class AbstractFileSource(object):
         }
         return Event(Event.EMPTY_ID, values)
 
+    def emit(self):
+        """
+        Process the next line from the file source, or raise
+        StopIteration.
+
+        :returns: The next :class:`Event`
+        :rtype: :class:`Event`
+        :raises: StopIteration
+        """
+        try:
+            return self._emit()
+        except KeyboardInterrupt:
+            raise StopIteration
+
 class StdinSource(IPlugin, AbstractFileSource):
     """
     Read in lines from stdin.
@@ -96,11 +105,7 @@ class StdinSource(IPlugin, AbstractFileSource):
     def __str__(self):
         return "StdinSource(origin=%s, linemax=%d)" % (self.hostname, self.linemax)
 
-    def configure(self, section):
-        AbstractFileSource.configure(self, section)
-
-    def emit(self):
-        try:
-            return AbstractFileSource.emit(self)
-        except KeyboardInterrupt:
-            raise StopIteration
+    def readline(self):
+        if self.linemax == None:
+            return self.f.readline()
+        return self.f.readline(self.linemax)

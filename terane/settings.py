@@ -505,6 +505,8 @@ class Section(object):
     :type name: str
     :param options: The parent :class:`Settings` instance.
     :type options: :class:`ConfigParser.RawConfigParser`
+    :param cwd: the current working directory
+    :type cwd: str
     """
 
     def __init__(self, name, options, cwd):
@@ -669,15 +671,15 @@ class NodespecSettings(object):
         :param pipeline: A list of Node objects
         :type pipeline: list
         """
-        self._config = RawConfigParser()
+        self._options = RawConfigParser()
         self._cwd = os.getcwd()
         self._nodes = list()
         index = 0
         for node in pipeline:
             sectionname = "node%i:%s" % (index, node.name)
-            self._config.add_section(sectionname)
+            self._options.add_section(sectionname)
             for key,value in node.params.items():
-                self._config.set(sectionname, key, value)
+                self._options.set(sectionname, key, value)
             self._nodes.append(sectionname)
             index += 1
 
@@ -708,9 +710,9 @@ class NodespecSettings(object):
         """
         try:
             sectionname = self._nodes[index]
-            return Section(sectionname, self)
+            return Section(sectionname, self._options, self._cwd)
         except IndexError:
-            return Section(None, self)
+            return Section(None, self._options, self._cwd)
 
     def sections(self):
         """
@@ -721,7 +723,7 @@ class NodespecSettings(object):
         """
         sections = []
         for sectionname in self._nodes:
-            sections.append(Section(sectionname, self))
+            sections.append(Section(sectionname, self._options, self._cwd))
         return sections
 
 class _UnittestSettings(Settings):
