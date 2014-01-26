@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Terane.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys, time, socket
+import sys, codecs, time, socket
 from terane.plugin import IPlugin
 from terane.event import Event
 from terane.loggers import getLogger
@@ -93,6 +93,35 @@ class AbstractFileSource(object):
             return self._emit()
         except KeyboardInterrupt:
             raise StopIteration
+
+
+class FileSource(IPlugin, AbstractFileSource):
+    """
+    Read in lines from the specified file.
+    """
+    def __init__(self, *args, **kwargs):
+        AbstractFileSource.__init__(self, *args, **kwargs)
+        self.path = None
+        self.encoding = 'utf-8'
+
+    def __str__(self):
+        return "FileSource(path=%s, encoding=%s, origin=%s, linemax=%d)" % (self.path, self.encoding, self.hostname, self.linemax)
+
+    def configure(self, section):
+        AbstractFileSource.configure(self, section)
+        self.path = section.getPath("path", self.path)
+        self.encoding = section.getString("encoding", self.encoding)
+
+    def init(self):
+        self.f = codecs.open(self.path, mode='r', encoding=self.encoding)
+
+    def readline(self):
+        if self.linemax == None:
+            return self.f.readline()
+        return self.f.readline(self.linemax)
+
+    def fini(self):
+        self.f.close()
 
 class StdinSource(IPlugin, AbstractFileSource):
     """

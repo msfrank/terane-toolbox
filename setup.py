@@ -72,6 +72,7 @@ setup(
             'terane-search=terane.toolbox.search:search_main',
             ],
         'terane.plugin.pipeline': [
+            'file_source=terane.sources.file:FileSource',
             'stdin_source=terane.sources.file:StdinSource',
             'tail_source=terane.sources.tail:TailSource',
             'syslog_sink=terane.sinks.syslog:SyslogSink',
